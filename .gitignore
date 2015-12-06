@@ -1,0 +1,19 @@
+# Visual Studio
+*.opensdf
+*.sdf
+*.v12.suo
+*.vcxproj
+*.vcxproj.user
+*.pdb
+*.sln
+*.log
+*.tlog
+*.Build.CppClean.log
+
+# C++
+*.exe
+
+# Project
+*.cu.cache
+PathTracer/src/
+PathTracer/Release/*.obj
