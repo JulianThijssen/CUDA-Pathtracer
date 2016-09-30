@@ -1,5 +1,6 @@
 #include "Window.h"
 
+#include <GL/glew.h>
 #include "kernel.cuh"
 #include "curand.h"
 

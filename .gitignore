@@ -2,6 +2,7 @@
 *.opensdf
 *.sdf
 *.v12.suo
+*.suo
 *.vcxproj
 *.vcxproj.user
 *.pdb
@@ -9,6 +10,10 @@
 *.log
 *.tlog
 *.Build.CppClean.log
+*.opendb
+*.db
+*.idb
+*.deps
 
 # C++
 *.exe
@@ -16,4 +21,6 @@
 # Project
 *.cu.cache
 PathTracer/src/
-PathTracer/Release/*.obj
+PathTracer/Debug/
+PathTracer/Release/
+PathTracer/x64
