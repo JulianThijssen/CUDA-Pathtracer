@@ -14,7 +14,8 @@
 #define CAMERA_FAR 10000
 #define NUM_MESHES 8
 #define ITERATIONS 5
-#define NUM_BLOCKS 64
+#define NUM_THREADS 32
+#define EPSILON 0.0001
 
 float randf() {
 	return static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
@@ -28,12 +29,7 @@ __device__ Vector3f generateVector(curandState *state, unsigned int idx, Vector3
 	Vector3f rand(x, y, z);
 	rand.normalise();
 
-	if (dot(rand, n) > 0) {
-		return rand;
-	}
-	else {
-		return -rand;
-	}
+	return (dot(rand, n) > 0) ? rand: -rand;
 }
 
 __global__ void setup_kernel(curandState *state) {
@@ -69,7 +65,7 @@ __global__ void traceKernel(float* out, const int w, const int h,
 		for (int j = 0; j < NUM_MESHES; j++) {
 			Vector3f n(0, 0, 0);
 
-			float t = intersect(rayO, rayD, meshes[j], n);
+			float t = intersect(rayO+rayD*EPSILON, rayD, meshes[j], n);
 			if (t > 0 && t < min_t) {
 				min_t = t;
 				min_n.set(n.x, n.y, n.z);
@@ -174,8 +170,8 @@ cudaError_t uploadMesh(Mesh** meshes)
 cudaError_t init(curandState** d_state) {
 	cudaError_t cudaStatus;
 
-	unsigned int blockSize = NUM_BLOCKS;
-	unsigned int gridSize = (512 * 512) / NUM_BLOCKS + ((512 * 512) % NUM_BLOCKS == 0 ? 0 : 1);
+	unsigned int blockSize = NUM_THREADS;
+	unsigned int gridSize = (512 * 512) / NUM_THREADS + ((512 * 512) % NUM_THREADS == 0 ? 0 : 1);
 
 	cudaMalloc(d_state, gridSize * blockSize * sizeof(curandState));
 
@@ -195,8 +191,8 @@ Error:
 cudaError_t trace(float** dev_out, const Vector3f& o, const Vector3f& d, uint width, uint height, Mesh* meshes, curandState* d_state) {
 	cudaError_t cudaStatus;
 	
-	unsigned int blockSize = NUM_BLOCKS;
-	unsigned int gridSize = (width * height) / NUM_BLOCKS + ((width * height) % NUM_BLOCKS == 0 ? 0 : 1);
+	unsigned int blockSize = NUM_THREADS;
+	unsigned int gridSize = (width * height) / NUM_THREADS + ((width * height) % NUM_THREADS == 0 ? 0 : 1);
 
 	Vector3f cz = d;
 	Vector3f cy(0, 1, 0);
