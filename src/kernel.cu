@@ -9,19 +9,28 @@
 #include <cfloat>
 #include <string>
 
+#define PI 3.14159265
+#define ONE_OVER_PI 0.318309886
+
+#define CUDA __host__ __device__
 #define HOST __host__
 #define DEVICE __device__
 #define CAMERA_FAR 10000
 #define NUM_MESHES 8
 #define ITERATIONS 5
 #define NUM_THREADS 32
-#define EPSILON 0.0001
+#define EPSILON 0.001
+
+CUDA struct Ray {
+	Vector3f o;
+	Vector3f d;
+};
 
 float randf() {
 	return static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
 }
 
-__device__ Vector3f generateVector(curandState *state, unsigned int idx, Vector3f n) {
+__device__ Vector3f generateVector(unsigned int idx, curandState *state, Vector3f n) {
 	float x = curand_uniform(&state[idx]) * 2 - 1;
 	float y = curand_uniform(&state[idx]) * 2 - 1;
 	float z = curand_uniform(&state[idx]) * 2 - 1;
@@ -37,11 +46,55 @@ __global__ void setup_kernel(curandState *state) {
 	curand_init(0, idx, 0, &state[idx]);
 }
 
+__device__ void indirectLighting(const unsigned int idx, const Ray &ray,
+	Vector3f &rad, Mesh* meshes, curandState *state)
+{
+	Vector3f o = ray.o;
+	Vector3f d = ray.d;
+
+	Vector3f reflRad = Vector3f(1, 1, 1);
+	for (int k = 0; k < ITERATIONS; k++) {
+		// Scene intersection
+		float closest_t = CAMERA_FAR;
+		Vector3f hit_n;
+		Mesh* mesh;
+
+		for (int j = 0; j < NUM_MESHES; j++) {
+			Vector3f n(0, 0, 0);
+
+			float t = intersect(o + d*EPSILON, d, meshes[j], n);
+			if (t > 0 && t < closest_t) {
+				closest_t = t;
+				hit_n.set(n.x, n.y, n.z);
+				mesh = &meshes[j];
+			}
+		}
+
+		if (closest_t < CAMERA_FAR) {
+			if (mesh->emission > EPSILON) {
+				rad = reflRad * mesh->emission;
+				return;
+			}
+
+			// Generate new ray from intersection
+			o = o + d * closest_t;
+			d = generateVector(idx, state, hit_n);
+
+			float cos = dot(hit_n, d);
+			float brdf = 2.0f;// ONE_OVER_PI;
+			reflRad *= mesh->albedo * cos * brdf;
+		}
+		else {
+			// The ray escaped, no contribution
+			return;
+		}
+	}
+}
+
 __global__ void traceKernel(float* out, const int w, const int h,
 	const Vector3f o, const Vector3f cx, const Vector3f cy, const Vector3f cz,
 	Mesh* meshes, curandState *state)
 {
-	//int i = threadIdx.x;
 	unsigned int idx = blockIdx.x*blockDim.x + threadIdx.x;
 	unsigned int x = idx % w;
 	unsigned int y = idx / w;
@@ -49,51 +102,16 @@ __global__ void traceKernel(float* out, const int w, const int h,
 	float uvx = 2 * ((float)x / w) - 1;
 	float uvy = 2 * ((float)y / h) - 1;
 
-	float aspect = (float) w / h;
+	float aspect = (float)w / h;
 
 	Vector3f rayO = o + (cx * uvx) + (cy * uvy);
 	Vector3f rayD = ((((cx * aspect * uvx) + (cy * uvy)) * 0.33135) + cz).normalise();
+	Ray ray = { rayO, rayD };
 
-	Vector3f rad(1, 1, 1);
+	Vector3f rad(0, 0, 0);
 
-	for (int k = 0; k < ITERATIONS; k++) {
-		// Scene intersection
-		float min_t = CAMERA_FAR;
-		Vector3f min_n(0, 0, 0);
-		Mesh* mesh;
+	indirectLighting(idx, ray, rad, meshes, state);
 
-		for (int j = 0; j < NUM_MESHES; j++) {
-			Vector3f n(0, 0, 0);
-
-			float t = intersect(rayO+rayD*EPSILON, rayD, meshes[j], n);
-			if (t > 0 && t < min_t) {
-				min_t = t;
-				min_n.set(n.x, n.y, n.z);
-				mesh = &meshes[j];
-			}
-		}
-
-		if (min_t < CAMERA_FAR) {
-			if (mesh->emission > 0.5) {
-				rad *= mesh->emission;
-				break;
-			}
-			rayO = rayO + rayD * min_t; // Intersection point
-			rayD = generateVector(state, idx, min_n);
-
-			float cos = dot(min_n, rayD);
-			Vector3f brdf = mesh->albedo * (2 * cos);
-			rad *= brdf;
-		}
-		else {
-			rad.set(0, 0, 0);
-			break;
-		}
-		if (k == ITERATIONS - 1) {
-			rad.set(0, 0, 0);
-			break;
-		}
-	}
 	out[y * w * 3 + x * 3 + 0] += rad.x;
 	out[y * w * 3 + x * 3 + 1] += rad.y;
 	out[y * w * 3 + x * 3 + 2] += rad.z;

@@ -116,63 +116,6 @@ Mesh* loadMesh(std::string path) {
 		memcpy(&mesh[i], meshes[i], sizeof(Mesh));
 	}
 
-	//Mesh* mesh = (Mesh*) malloc(meshes.size() * sizeof(Mesh));
-	//for (int i = 0; i < meshes.size(); i++) {
-	//	mesh[i] = meshes[i];
-	//}
-
-	//Mesh* mesh = (Mesh*) malloc(3 * sizeof(Mesh));
-
-	//mesh[0].numVerts = 4; mesh[1].numVerts = 4; mesh[2].numVerts = 4;
-	//mesh[0].numNorms = 1; mesh[1].numNorms = 1; mesh[2].numNorms = 1;
-	//mesh[0].numFaces = 2; mesh[1].numFaces = 2; mesh[2].numFaces = 2;
-
-	//for (int i = 0; i < 3; i++) {
-	//	mesh[i].vertices = (Vector3f*)malloc(mesh[i].numVerts * sizeof(Vector3f));
-	//	mesh[i].normals = (Vector3f*)malloc(mesh[i].numNorms * sizeof(Vector3f));
-	//	mesh[i].faces = (Face*)malloc(mesh[i].numFaces * sizeof(Face));
-	//}
-
-	//mesh[0].vertices[0].set(1, -1, -5);
-	//mesh[0].vertices[1].set(2, -1, -3);
-	//mesh[0].vertices[2].set(1, 1, -5);
-	//mesh[0].vertices[3].set(2, 1, -3);
-	//mesh[0].emission = 0;
-	//mesh[0].albedo = Vector3f(1, 0, 0);
-
-	//mesh[1].vertices[0].set(-2, -1, -3);
-	//mesh[1].vertices[1].set(-1, -1, -5);
-	//mesh[1].vertices[2].set(-2, 1, -3);
-	//mesh[1].vertices[3].set(-1, 1, -5);
-	//mesh[1].emission = 0;
-	//mesh[1].albedo = Vector3f(0, 0, 1);
-
-	//mesh[2].vertices[0].set(-1, -1, -5);
-	//mesh[2].vertices[1].set(1, -1, -5);
-	//mesh[2].vertices[2].set(-1, 1, -5);
-	//mesh[2].vertices[3].set(1, 1, -5);
-	//mesh[2].emission = 10;
-	//mesh[2].albedo = Vector3f(1, 1, 1);
-
-	//mesh[0].normals[0].set(-0.8944, 0, 0.4472);
-	//mesh[1].normals[0].set(0.8944, 0, 0.4472);
-	//mesh[2].normals[0].set(0, 0, 1);
-
-	//mesh[0].faces[0].v0 = 0; mesh[0].faces[0].v1 = 1; mesh[0].faces[0].v2 = 2;
-	//mesh[0].faces[1].v0 = 2; mesh[0].faces[1].v1 = 1; mesh[0].faces[1].v2 = 3;
-	//mesh[0].faces[0].n0 = 0; mesh[0].faces[0].n1 = 0; mesh[0].faces[0].n2 = 0;
-	//mesh[0].faces[1].n0 = 0; mesh[0].faces[1].n1 = 0; mesh[0].faces[1].n2 = 0;
-
-	//mesh[1].faces[0].v0 = 0; mesh[1].faces[0].v1 = 1; mesh[1].faces[0].v2 = 2;
-	//mesh[1].faces[1].v0 = 2; mesh[1].faces[1].v1 = 1; mesh[1].faces[1].v2 = 3;
-	//mesh[1].faces[0].n0 = 0; mesh[1].faces[0].n1 = 0; mesh[1].faces[0].n2 = 0;
-	//mesh[1].faces[1].n0 = 0; mesh[1].faces[1].n1 = 0; mesh[1].faces[1].n2 = 0;
-
-	//mesh[2].faces[0].v0 = 0; mesh[2].faces[0].v1 = 1; mesh[2].faces[0].v2 = 2;
-	//mesh[2].faces[1].v0 = 2; mesh[2].faces[1].v1 = 1; mesh[2].faces[1].v2 = 3;
-	//mesh[2].faces[0].n0 = 0; mesh[2].faces[0].n1 = 0; mesh[2].faces[0].n2 = 0;
-	//mesh[2].faces[1].n0 = 0; mesh[2].faces[1].n1 = 0; mesh[2].faces[1].n2 = 0;
-
 	return mesh;
 }
 
