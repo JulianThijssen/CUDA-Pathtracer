@@ -20,6 +20,7 @@
 #define ITERATIONS 5
 #define NUM_THREADS 32
 #define EPSILON 0.001
+#define ABSORPTION 0.25
 
 CUDA struct Ray {
 	Vector3f o;
@@ -53,7 +54,14 @@ __device__ void indirectLighting(const unsigned int idx, const Ray &ray,
 	Vector3f d = ray.d;
 
 	Vector3f reflRad = Vector3f(1, 1, 1);
-	for (int k = 0; k < ITERATIONS; k++) {
+	while (true) {
+		float p = curand_uniform(&state[idx]);
+
+		// Russian Roulette
+		if (p < ABSORPTION) {
+			return;
+		}
+
 		// Scene intersection
 		float closest_t = CAMERA_FAR;
 		Vector3f hit_n;
@@ -72,7 +80,9 @@ __device__ void indirectLighting(const unsigned int idx, const Ray &ray,
 
 		if (closest_t < CAMERA_FAR) {
 			if (mesh->emission > EPSILON) {
-				rad = reflRad * mesh->emission;
+				// We hit a light, set the total radiance
+				float rrWeight = 1 / (1 - ABSORPTION);
+				rad = reflRad * mesh->emission * rrWeight;
 				return;
 			}
 
