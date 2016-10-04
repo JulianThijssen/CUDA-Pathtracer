@@ -32,9 +32,9 @@ float randf() {
 }
 
 __device__ Vector3f generateVector(unsigned int idx, curandState *state, Vector3f n) {
-	float x = curand_uniform(&state[idx]) * 2 - 1;
-	float y = curand_uniform(&state[idx]) * 2 - 1;
-	float z = curand_uniform(&state[idx]) * 2 - 1;
+	float x = curand_normal(&state[idx]) * 2 - 1;
+	float y = curand_normal(&state[idx]) * 2 - 1;
+	float z = curand_normal(&state[idx]) * 2 - 1;
 
 	Vector3f rand(x, y, z);
 	rand.normalise();
@@ -125,10 +125,6 @@ __global__ void traceKernel(float* out, const int w, const int h,
 	out[y * w * 3 + x * 3 + 0] += rad.x;
 	out[y * w * 3 + x * 3 + 1] += rad.y;
 	out[y * w * 3 + x * 3 + 2] += rad.z;
-}
-
-__global__ void accumKernel(float* out, const int w, const int h, float* in, const int k) {
-	
 }
 
 cudaError_t uploadMesh(Mesh** meshes)
