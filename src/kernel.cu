@@ -22,6 +22,12 @@
 #define EPSILON 0.001
 #define ABSORPTION 0.25
 
+CUDA struct Basis {
+	Vector3f x;
+	Vector3f y;
+	Vector3f z;
+};
+
 CUDA struct Ray {
 	Vector3f o;
 	Vector3f d;
@@ -102,8 +108,7 @@ __device__ void indirectLighting(const unsigned int idx, const Ray &ray,
 }
 
 __global__ void traceKernel(float* out, const int w, const int h,
-	const Vector3f o, const Vector3f cx, const Vector3f cy, const Vector3f cz,
-	Mesh* meshes, curandState *state)
+	const Vector3f o, const Basis basis, Mesh* meshes, curandState *state)
 {
 	unsigned int idx = blockIdx.x*blockDim.x + threadIdx.x;
 	unsigned int x = idx % w;
@@ -114,8 +119,8 @@ __global__ void traceKernel(float* out, const int w, const int h,
 
 	float aspect = (float)w / h;
 
-	Vector3f rayO = o + (cx * uvx) + (cy * uvy);
-	Vector3f rayD = ((((cx * aspect * uvx) + (cy * uvy)) * 0.33135) + cz).normalise();
+	Vector3f rayO = o + (basis.x * uvx) + (basis.y * uvy);
+	Vector3f rayD = ((((basis.x * aspect * uvx) + (basis.y * uvy)) * 0.33135) + basis.z).normalise();
 	Ray ray = { rayO, rayD };
 
 	Vector3f rad(0, 0, 0);
@@ -222,9 +227,10 @@ cudaError_t trace(float** dev_out, const Vector3f& o, const Vector3f& d, uint wi
 	Vector3f cy(0, 1, 0);
 	Vector3f cx = cross(cz, cy).normalise();
 	cy = cross(cx, cz);
+	Basis basis = { cx, cy, cz };
 
 	// Launch a kernel on the GPU with one thread for each element.
-	traceKernel << <gridSize, blockSize >> >(*dev_out, width, height, o, cx, cy, cz, meshes, d_state);
+	traceKernel << <gridSize, blockSize >> >(*dev_out, width, height, o, basis, meshes, d_state);
 	
 	//accumKernel << <gridSize, blockSize >> >(*dev_out, 512, 512, dev_out, 1);
 
