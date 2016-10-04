@@ -196,11 +196,11 @@ cudaError_t uploadMesh(Mesh** meshes)
 	return cudaStatus;
 }
 
-cudaError_t init(curandState** d_state) {
+cudaError_t init(uint w, uint h, curandState** d_state) {
 	cudaError_t cudaStatus;
 
 	unsigned int blockSize = NUM_THREADS;
-	unsigned int gridSize = (512 * 512) / NUM_THREADS + ((512 * 512) % NUM_THREADS == 0 ? 0 : 1);
+	unsigned int gridSize = (w * h) / NUM_THREADS + ((w * h) % NUM_THREADS == 0 ? 0 : 1);
 
 	cudaMalloc(d_state, gridSize * blockSize * sizeof(curandState));
 

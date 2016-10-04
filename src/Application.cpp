@@ -41,7 +41,7 @@ int main()
 
 	// Init the kernel
 	curandState *d_state;
-	init(&d_state);
+	init(width, height, &d_state);
 
 	clock_t begin = clock();
 	int frames = 0;
