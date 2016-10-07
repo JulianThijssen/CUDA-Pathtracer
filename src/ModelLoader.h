@@ -3,6 +3,7 @@
 #define MESHLOADER_H
 
 #include "Mesh.h"
+#include "Scene.h"
 #include <string>
 #include <cstdlib>
 #include <fstream>
@@ -25,10 +26,10 @@ std::vector<std::string> split(std::string s, char* delimiter) {
 	return tokens;
 }
 
-Mesh* loadMesh(std::string path) {
+void loadMesh(Scene &scene, std::string path) {
 	std::ifstream f("res/cornell_box.obj");
 
-	std::vector<Mesh*> meshes;
+	//std::vector<Mesh*> meshes;
 	Mesh* m = new Mesh();
 	std::vector<Vector3f> vertices;
 	std::vector<Vector3f> normals;
@@ -57,7 +58,7 @@ Mesh* loadMesh(std::string path) {
 			m->numVerts = vertices.size();
 			m->numNorms = normals.size();
 			m->numFaces = faces.size();
-			meshes.push_back(m);
+			scene.addMesh(*m);
 			printf("Presizes: %d, %d, %d, %f\n", m->numVerts, m->numNorms, m->numFaces, m->emission);
 			m = new Mesh();
 			vertices.clear();
@@ -110,13 +111,6 @@ Mesh* loadMesh(std::string path) {
 		}
 	}
 	f.close();
-
-	Mesh* mesh = new Mesh[meshes.size()];
-	for (int i = 0; i < meshes.size(); i++) {
-		memcpy(&mesh[i], meshes[i], sizeof(Mesh));
-	}
-
-	return mesh;
 }
 
 #endif /* MESHLOADER_H */

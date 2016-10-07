@@ -26,7 +26,8 @@ int main()
 	cudaStatus = cudaSetDevice(0);
 
 	// Upload the scene
-	cudaStatus = uploadMesh(&meshes);
+	unsigned int meshCount;
+	cudaStatus = uploadMesh(&meshes, meshCount);
 	if (cudaStatus != cudaSuccess) {
 		fprintf(stderr, "uploadtriangle failed!");
 		return 1;
@@ -57,7 +58,7 @@ int main()
 		}
 		
 		// Add vectors in parallel.
-		cudaStatus = trace(&dev_out, o, d, width, height, meshes, d_state);
+		cudaStatus = trace(&dev_out, o, d, width, height, meshes, meshCount, d_state);
 		if (cudaStatus != cudaSuccess) {
 			fprintf(stderr, "trace failed!");
 			exit(1);
