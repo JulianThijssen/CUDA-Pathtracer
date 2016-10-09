@@ -7,6 +7,8 @@
 #include <cfloat>
 #include <string>
 
+#include "Ray.h"
+
 #define PI 3.14159265
 #define ONE_OVER_PI 0.318309886
 
@@ -23,11 +25,6 @@ CUDA struct Basis {
 	Vector3f x;
 	Vector3f y;
 	Vector3f z;
-};
-
-CUDA struct Ray {
-	Vector3f o;
-	Vector3f d;
 };
 
 float randf() {
@@ -51,10 +48,9 @@ __global__ void setup_kernel(curandState *state) {
 }
 
 __device__ void indirectLighting(const unsigned int idx, const Ray &ray,
-	Vector3f &rad, Mesh* meshes, const unsigned int meshCount, curandState *state)
+	Vector3f &rad, const Scene &scene, curandState *state)
 {
-	Vector3f o = ray.o;
-	Vector3f d = ray.d;
+	Ray r(ray.o, ray.d);
 
 	Vector3f reflRad = Vector3f(1, 1, 1);
 	while (true) {
@@ -66,22 +62,13 @@ __device__ void indirectLighting(const unsigned int idx, const Ray &ray,
 		}
 
 		// Scene intersection
-		float closest_t = CAMERA_FAR;
-		Vector3f hit_n;
-		Mesh* mesh;
+		float t;
+		Vector3f n;
+		Mesh *mesh;
 
-		for (int j = 0; j < meshCount; j++) {
-			Vector3f n(0, 0, 0);
+		scene.intersect(r, &mesh, t, n);
 
-			float t = intersect(o + d*EPSILON, d, meshes[j], n);
-			if (t > 0 && t < closest_t) {
-				closest_t = t;
-				hit_n.set(n.x, n.y, n.z);
-				mesh = &meshes[j];
-			}
-		}
-
-		if (closest_t < CAMERA_FAR) {
+		if (t < CAMERA_FAR) {
 			if (mesh->emission > EPSILON) {
 				// We hit a light, set the total radiance
 				float rrWeight = 1 / (1 - ABSORPTION);
@@ -90,10 +77,10 @@ __device__ void indirectLighting(const unsigned int idx, const Ray &ray,
 			}
 
 			// Generate new ray from intersection
-			o = o + d * closest_t;
-			d = generateVector(idx, state, hit_n);
+			r.o = r.o + r.d * t;
+			r.d = generateVector(idx, state, n);
 
-			float cos = dot(hit_n, d);
+			float cos = dot(n, r.d);
 			float brdf = 2.0f;// ONE_OVER_PI;
 			reflRad *= mesh->albedo * cos * brdf;
 		}
@@ -105,7 +92,7 @@ __device__ void indirectLighting(const unsigned int idx, const Ray &ray,
 }
 
 __global__ void traceKernel(float* out, const int w, const int h,
-	const Vector3f o, const Basis basis, Mesh* meshes, const unsigned int meshCount, curandState *state)
+	const Vector3f o, const Basis basis, const Scene scene, curandState *state)
 {
 	unsigned int idx = blockIdx.x*blockDim.x + threadIdx.x;
 	unsigned int x = idx % w;
@@ -118,11 +105,11 @@ __global__ void traceKernel(float* out, const int w, const int h,
 
 	Vector3f rayO = o + (basis.x * uvx) + (basis.y * uvy);
 	Vector3f rayD = ((((basis.x * aspect * uvx) + (basis.y * uvy)) * 0.33135) + basis.z).normalise();
-	Ray ray = { rayO, rayD };
+	Ray ray(rayO, rayD);
 
 	Vector3f rad(0, 0, 0);
 
-	indirectLighting(idx, ray, rad, meshes, meshCount, state);
+	indirectLighting(idx, ray, rad, scene, state);
 
 	out[y * w * 3 + x * 3 + 0] += rad.x;
 	out[y * w * 3 + x * 3 + 1] += rad.y;
@@ -230,7 +217,7 @@ cudaError_t trace(float** dev_out, const Vector3f& o, const Vector3f& d, uint wi
 	Basis basis = { cx, cy, cz };
 
 	// Launch a kernel on the GPU with one thread for each element.
-	traceKernel << <gridSize, blockSize >> >(*dev_out, width, height, o, basis, scene.dev_meshes, scene.meshCount, d_state);
+	traceKernel << <gridSize, blockSize >> >(*dev_out, width, height, o, basis, scene, d_state);
 	
 	//accumKernel << <gridSize, blockSize >> >(*dev_out, 512, 512, dev_out, 1);
 
