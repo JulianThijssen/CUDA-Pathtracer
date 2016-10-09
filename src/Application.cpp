@@ -1,5 +1,8 @@
 #include "Window.h"
 
+#include "Scene.h"
+#include "ModelLoader.h"
+
 #include <GL/glew.h>
 #include "kernel.cuh"
 #include "curand.h"
@@ -9,6 +12,7 @@
 int main()
 {
 	Window window("Path Tracer", 512, 512);
+	Scene scene;
 	
 	Vector3f o(278, 273, -800);
 	const Vector3f d(0, 0, 1);
@@ -26,8 +30,9 @@ int main()
 	cudaStatus = cudaSetDevice(0);
 
 	// Upload the scene
-	unsigned int meshCount;
-	cudaStatus = uploadMesh(&meshes, meshCount);
+	loadMesh(scene, std::string("path"));
+
+	cudaStatus = uploadMesh(scene);
 	if (cudaStatus != cudaSuccess) {
 		fprintf(stderr, "uploadtriangle failed!");
 		return 1;
@@ -58,7 +63,7 @@ int main()
 		}
 		
 		// Add vectors in parallel.
-		cudaStatus = trace(&dev_out, o, d, width, height, meshes, meshCount, d_state);
+		cudaStatus = trace(&dev_out, o, d, width, height, scene, d_state);
 		if (cudaStatus != cudaSuccess) {
 			fprintf(stderr, "trace failed!");
 			exit(1);
@@ -74,7 +79,7 @@ int main()
 		}
 		
 		// Divide the accumulated buffer by the iterations
-		for (int i = 0; i < width * height * 3; i++) {
+		for (unsigned int i = 0; i < width * height * 3; i++) {
 			out[i] /= iterations;
 		}
 

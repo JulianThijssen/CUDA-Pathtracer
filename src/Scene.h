@@ -10,12 +10,20 @@ class Scene
 public:
 	Scene();
 	~Scene();
-	std::vector<Mesh> &getMeshes();
+
+	// Host
 	Mesh &getMesh(unsigned int i);
 	void addMesh(Mesh &mesh);
-	unsigned int meshCount();
-private:
 	std::vector<Mesh> meshes;
+
+	// Device
+	__device__ bool intersect(Mesh &mesh, float &t);
+	Mesh *dev_meshes;
+
+	// Both
+	unsigned int meshCount;
+private:
+
 };
 
 #endif /* SCENE_H */

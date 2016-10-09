@@ -1,8 +1,6 @@
 #include "kernel.cuh"
 #include "curand.h"
 
-#include "ModelLoader.h"
-
 #include <stdio.h>
 #include <cstdlib>
 #include <ctime>
@@ -131,22 +129,18 @@ __global__ void traceKernel(float* out, const int w, const int h,
 	out[y * w * 3 + x * 3 + 2] += rad.z;
 }
 
-cudaError_t uploadMesh(Mesh** meshes, unsigned int &meshCount)
+cudaError_t uploadMesh(Scene &scene)
 {
-	Scene scene;
-	loadMesh(scene, std::string("path"));
-
-	meshCount = scene.meshCount();
-	Mesh* mesh = new Mesh[scene.meshCount()];
-	for (int i = 0; i < scene.meshCount(); i++) {
+	Mesh* mesh = new Mesh[scene.meshCount];
+	for (int i = 0; i < scene.meshCount; i++) {
 		memcpy(&mesh[i], &scene.getMesh(i), sizeof(Mesh));
 	}
 	
 	cudaError_t cudaStatus;
 
-	Mesh* h_mesh = new Mesh[scene.meshCount()];
+	Mesh* h_mesh = new Mesh[scene.meshCount];
 	
-	for (int i = 0; i < scene.meshCount(); i++) {
+	for (int i = 0; i < scene.meshCount; i++) {
 		printf("Sizes: %d, %d, %d, %d, %f\n", mesh[i].numVerts, mesh[i].numNorms, mesh[i].numFaces, i, mesh[i].emission);
 		printf("%s, %s\n", mesh[i].vertices[0].str().c_str(), mesh[i].normals[0].str().c_str());
 		
@@ -190,11 +184,11 @@ cudaError_t uploadMesh(Mesh** meshes, unsigned int &meshCount)
 		h_mesh[i].albedo = mesh[i].albedo;
 	}
 
-	cudaStatus = cudaMalloc((void**)meshes, scene.meshCount() * sizeof(Mesh));
+	cudaStatus = cudaMalloc((void**)&scene.dev_meshes, scene.meshCount * sizeof(Mesh));
 	if (cudaStatus != cudaSuccess) {
 		fprintf(stderr, "Meshes cudaMalloc failed!");
 	}
-	cudaStatus = cudaMemcpy(*meshes, h_mesh, scene.meshCount() * sizeof(Mesh), cudaMemcpyHostToDevice);
+	cudaStatus = cudaMemcpy(scene.dev_meshes, h_mesh, scene.meshCount * sizeof(Mesh), cudaMemcpyHostToDevice);
 	if (cudaStatus != cudaSuccess) {
 		fprintf(stderr, "Meshes cudaMemcpy failed!");
 	}
@@ -223,7 +217,7 @@ Error:
 	return cudaStatus;
 }
 
-cudaError_t trace(float** dev_out, const Vector3f& o, const Vector3f& d, uint width, uint height, Mesh* meshes, const unsigned int meshCount, curandState* d_state) {
+cudaError_t trace(float** dev_out, const Vector3f& o, const Vector3f& d, uint width, uint height, const Scene &scene, curandState* d_state) {
 	cudaError_t cudaStatus;
 	
 	unsigned int blockSize = NUM_THREADS;
@@ -236,7 +230,7 @@ cudaError_t trace(float** dev_out, const Vector3f& o, const Vector3f& d, uint wi
 	Basis basis = { cx, cy, cz };
 
 	// Launch a kernel on the GPU with one thread for each element.
-	traceKernel << <gridSize, blockSize >> >(*dev_out, width, height, o, basis, meshes, meshCount, d_state);
+	traceKernel << <gridSize, blockSize >> >(*dev_out, width, height, o, basis, scene.dev_meshes, scene.meshCount, d_state);
 	
 	//accumKernel << <gridSize, blockSize >> >(*dev_out, 512, 512, dev_out, 1);
 

@@ -2,8 +2,8 @@
 #ifndef MESHLOADER_H
 #define MESHLOADER_H
 
-#include "Mesh.h"
 #include "Scene.h"
+#include "Mesh.h"
 #include <string>
 #include <cstdlib>
 #include <fstream>
@@ -55,9 +55,9 @@ void loadMesh(Scene &scene, std::string path) {
 				m->faces[i].n2 = faces[i].n2;
 				printf("faces: %d, %d, %d\n", m->faces[i].v0, m->faces[i].v1, m->faces[i].v2);
 			}
-			m->numVerts = vertices.size();
-			m->numNorms = normals.size();
-			m->numFaces = faces.size();
+			m->numVerts = (unsigned int) vertices.size();
+			m->numNorms = (unsigned int) normals.size();
+			m->numFaces = (unsigned int) faces.size();
 			scene.addMesh(*m);
 			printf("Presizes: %d, %d, %d, %f\n", m->numVerts, m->numNorms, m->numFaces, m->emission);
 			m = new Mesh();
@@ -73,16 +73,16 @@ void loadMesh(Scene &scene, std::string path) {
 			printf("Name: %s\n", tokens[1].c_str());
 		}
 		if ("c" == tokens[0]) {
-			float x = atof(tokens[1].c_str());
-			float y = atof(tokens[2].c_str());
-			float z = atof(tokens[3].c_str());
+			float x = (float) atof(tokens[1].c_str());
+			float y = (float) atof(tokens[2].c_str());
+			float z = (float) atof(tokens[3].c_str());
 			m->albedo.set(x, y, z);
-			m->emission = atof(tokens[4].c_str());
+			m->emission = (float) atof(tokens[4].c_str());
 		}
 		if ("v" == tokens[0] || "vn" == tokens[0]) {
-			float x = atof(tokens[1].c_str());
-			float y = atof(tokens[2].c_str());
-			float z = atof(tokens[3].c_str());
+			float x = (float) atof(tokens[1].c_str());
+			float y = (float) atof(tokens[2].c_str());
+			float z = (float) atof(tokens[3].c_str());
 
 			if ("v" == tokens[0]) {
 				vertices.push_back(Vector3f(x, y, z));
@@ -111,6 +111,8 @@ void loadMesh(Scene &scene, std::string path) {
 		}
 	}
 	f.close();
+
+	scene.meshCount = (unsigned int) scene.meshes.size();
 }
 
 #endif /* MESHLOADER_H */
