@@ -4,6 +4,9 @@
 
 #include "Vector3f.h"
 
+#include <curand.h>
+#include <curand_kernel.h>
+
 class Face {
 public:
 	unsigned int v0, v1, v2;
@@ -20,6 +23,28 @@ public:
 	Vector3f* vertices;
 	Vector3f* normals;
 	Face* faces;
+
+	__device__ inline Vector3f getRandomSample(const unsigned int idx, curandState *state)
+	{
+		unsigned int faceIndex = (unsigned int)(curand_uniform(&state[idx]) * numFaces);
+
+		Face face = faces[faceIndex];
+
+		Vector3f v0 = vertices[face.v0];
+		Vector3f v1 = vertices[face.v1];
+		Vector3f v2 = vertices[face.v2];
+
+		float alpha = curand_uniform(&state[idx]);
+		float beta = curand_uniform(&state[idx]);
+		if (alpha + beta >= 1) {
+			alpha = 1 - alpha;
+			beta = 1 - beta;
+		}
+		float gamma = 1 - alpha - beta;
+		Vector3f sample = v0 * alpha + v1 * beta + v2 * gamma;
+
+		return sample;
+	}
 
 	__device__ inline float intersect(const Vector3f o, const Vector3f& d, Vector3f& n)
 	{
