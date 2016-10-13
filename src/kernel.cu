@@ -47,6 +47,62 @@ __global__ void setup_kernel(curandState *state) {
 	curand_init(0, idx, 0, &state[idx]);
 }
 
+__device__ void directLighting(const unsigned int idx, const Ray &ray,
+	Vector3f &rad, const Scene &scene, curandState *state)
+{
+	Vector3f reflRad = Vector3f(1, 1, 1);
+
+	Ray r(ray.o, ray.d);
+
+	// Scene intersection
+	float t;
+	Vector3f n;
+	Mesh *mesh;
+
+	scene.intersect(r, &mesh, t, n);
+
+	if (mesh->emission > EPSILON) {
+		rad += reflRad * mesh->emission;
+		return;
+	}
+
+	// Find the light
+	Mesh light;
+	for (int i = 0; i < scene.meshCount; i++) {
+		Mesh m = scene.dev_meshes[i];
+		if (m.emission > 1) {
+			light = m;
+			break;
+		}
+	}
+
+	// Get a random sample on the light
+	Vector3f sample = light.getRandomSample(idx, state);
+
+	// create a shadow ray to the light sample
+	r.o = r.o + r.d * t;
+	r.d = (sample - r.o).normalise();
+
+	// Apply BRDF
+	float cos = dot(n, r.d);
+	float brdf = 2.0f;
+	reflRad *= mesh->albedo * cos * brdf;
+
+	// Scene intersection
+	scene.intersect(r, &mesh, t, n);
+
+	r.o = r.o + r.d * t;
+	float diff = (r.o - sample).length();
+
+	float G = (cos * dot(n, -r.d)) / (t * t);
+
+	// Check if we hit the light
+	if (mesh->emission > EPSILON) {
+		rad += reflRad * mesh->emission * G / (1.0f / 13560);
+		return;
+	}
+}
+
 __device__ void indirectLighting(const unsigned int idx, const Ray &ray,
 	Vector3f &rad, const Scene &scene, curandState *state)
 {
@@ -109,6 +165,7 @@ __global__ void traceKernel(float* out, const int w, const int h,
 
 	Vector3f rad(0, 0, 0);
 
+	//directLighting(idx, ray, rad, scene, state);
 	indirectLighting(idx, ray, rad, scene, state);
 
 	out[y * w * 3 + x * 3 + 0] += rad.x;
