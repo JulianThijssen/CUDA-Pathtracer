@@ -30,7 +30,7 @@ int main()
 	cudaStatus = cudaSetDevice(0);
 
 	// Upload the scene
-	loadMesh(scene, std::string("path"));
+	loadScene(scene, std::string("res/cornell_box2.obj"));
 
 	cudaStatus = uploadMesh(scene);
 	if (cudaStatus != cudaSuccess) {

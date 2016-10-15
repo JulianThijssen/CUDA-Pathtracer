@@ -9,6 +9,12 @@
 #include <fstream>
 #include <vector>
 
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
+#include "Log.h"
+#include <iostream>
+
 std::vector<std::string> split(std::string s, char* delimiter) {
 	std::vector<std::string> tokens;
 
@@ -24,6 +30,59 @@ std::vector<std::string> split(std::string s, char* delimiter) {
 	delete[] line_c;
 
 	return tokens;
+}
+
+void loadScene(Scene &scene, std::string path) {
+	Assimp::Importer importer;
+
+	unsigned int flags = aiProcess_CalcTangentSpace | aiProcess_Triangulate | aiProcess_GenNormals | aiProcess_SortByPType | aiProcess_GenUVCoords;
+	const aiScene* aiScene = importer.ReadFile(path, flags);
+
+	if (!aiScene) {
+		Log::error(importer.GetErrorString());
+	}
+
+	scene.meshCount = aiScene->mNumMeshes;
+
+	for (unsigned int i = 0; i < scene.meshCount; i++) {
+		aiMesh* aiMesh = aiScene->mMeshes[i];
+
+		Mesh* m = new Mesh();
+		
+		m->numVerts = aiMesh->mNumVertices;
+		m->numNorms = aiMesh->mNumVertices;
+		m->numFaces = aiMesh->mNumFaces;
+
+		m->vertices = new Vector3f[m->numVerts];
+		m->normals = new Vector3f[m->numNorms];
+		for (unsigned int j = 0; j < m->numVerts; j++) {
+			m->vertices[j].x = aiMesh->mVertices[j].x;
+			m->vertices[j].y = aiMesh->mVertices[j].y;
+			m->vertices[j].z = aiMesh->mVertices[j].z;
+			m->normals[j].x = aiMesh->mNormals[j].x;
+			m->normals[j].y = aiMesh->mNormals[j].y;
+			m->normals[j].z = aiMesh->mNormals[j].z;
+		}
+
+		m->faces = new Face[m->numFaces];
+		for (unsigned int j = 0; j < m->numFaces; j++) {
+			m->faces[j].v0 = aiMesh->mFaces[j].mIndices[0];
+			m->faces[j].v1 = aiMesh->mFaces[j].mIndices[1];
+			m->faces[j].v2 = aiMesh->mFaces[j].mIndices[2];
+			m->faces[j].n0 = aiMesh->mFaces[j].mIndices[0];
+			m->faces[j].n1 = aiMesh->mFaces[j].mIndices[1];
+			m->faces[j].n2 = aiMesh->mFaces[j].mIndices[2];
+		}
+
+		m->albedo.set(1, 1, 1);
+		m->emission = 0;
+
+		if (m->vertices[0].x > 342 && m->vertices[0].x < 344) {
+			m->emission = 30;
+			std::cout << "Found Light" << std::endl;
+		}
+		scene.addMesh(*m);
+	}
 }
 
 void loadMesh(Scene &scene, std::string path) {
