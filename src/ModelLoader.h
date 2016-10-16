@@ -43,12 +43,14 @@ void loadScene(Scene &scene, std::string path) {
 	}
 
 	scene.meshCount = aiScene->mNumMeshes;
+	scene.materialCount = aiScene->mNumMaterials;
 
 	for (unsigned int i = 0; i < scene.meshCount; i++) {
 		aiMesh* aiMesh = aiScene->mMeshes[i];
 
 		Mesh* m = new Mesh();
 		
+		m->materialIndex = aiMesh->mMaterialIndex;
 		m->numVerts = aiMesh->mNumVertices;
 		m->numNorms = aiMesh->mNumVertices;
 		m->numFaces = aiMesh->mNumFaces;
@@ -74,14 +76,30 @@ void loadScene(Scene &scene, std::string path) {
 			m->faces[j].n2 = aiMesh->mFaces[j].mIndices[2];
 		}
 
-		m->albedo.set(1, 1, 1);
-		m->emission = 0;
-
-		if (m->vertices[0].x > 342 && m->vertices[0].x < 344) {
-			m->emission = 30;
-			std::cout << "Found Light" << std::endl;
-		}
 		scene.addMesh(*m);
+	}
+
+	for (unsigned int i = 0; i < scene.materialCount; i++) {
+		aiMaterial* aiMaterial = aiScene->mMaterials[i];
+
+		Material m;
+
+		aiColor3D albedo(0, 0, 0);
+		aiMaterial->Get(AI_MATKEY_COLOR_DIFFUSE, albedo);
+
+		aiColor3D emission(0, 0, 0);
+		aiMaterial->Get(AI_MATKEY_COLOR_EMISSIVE, emission);
+
+		m.albedo.set(albedo.r, albedo.g, albedo.b);
+		m.emission.set(emission.r, emission.g, emission.b);
+		std::cout << "Albedo: " << m.albedo.str() << std::endl;
+		std::cout << "Emission: " << m.emission.str() << std::endl;
+
+		scene.materials.push_back(m);
+
+		//aiString name;
+		//aiMaterial->Get(AI_MATKEY_NAME, name);
+		//std::cout << "Name: " << name.C_Str() << std::endl;
 	}
 }
 
@@ -118,7 +136,7 @@ void loadMesh(Scene &scene, std::string path) {
 			m->numNorms = (unsigned int) normals.size();
 			m->numFaces = (unsigned int) faces.size();
 			scene.addMesh(*m);
-			printf("Presizes: %d, %d, %d, %f\n", m->numVerts, m->numNorms, m->numFaces, m->emission);
+
 			m = new Mesh();
 			vertices.clear();
 			normals.clear();
@@ -130,13 +148,6 @@ void loadMesh(Scene &scene, std::string path) {
 
 		if ("o" == tokens[0]) {
 			printf("Name: %s\n", tokens[1].c_str());
-		}
-		if ("c" == tokens[0]) {
-			float x = (float) atof(tokens[1].c_str());
-			float y = (float) atof(tokens[2].c_str());
-			float z = (float) atof(tokens[3].c_str());
-			m->albedo.set(x, y, z);
-			m->emission = (float) atof(tokens[4].c_str());
 		}
 		if ("v" == tokens[0] || "vn" == tokens[0]) {
 			float x = (float) atof(tokens[1].c_str());

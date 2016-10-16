@@ -9,6 +9,7 @@
 #include "cuda_runtime.h"
 #include "Ray.h"
 #include "Mesh.h"
+#include "Material.h"
 #include "Vector3f.h"
 
 #include <vector>
@@ -23,6 +24,7 @@ public:
 	Mesh &getMesh(unsigned int i);
 	void addMesh(Mesh &mesh);
 	std::vector<Mesh> meshes;
+	std::vector<Material> materials;
 
 	// Device
 	__device__ inline bool Scene::intersect(const Ray &ray, Mesh **mesh, float &t, Vector3f &n) const {
@@ -44,9 +46,11 @@ public:
 	}
 
 	Mesh *dev_meshes;
+	Material *dev_materials;
 
 	// Both
 	unsigned int meshCount;
+	unsigned int materialCount;
 private:
 
 };

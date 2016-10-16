@@ -51,7 +51,7 @@ __device__ void directLighting(const unsigned int idx, const Ray &ray,
 	Vector3f &rad, const Scene &scene, curandState *state)
 {
 	Vector3f reflRad = Vector3f(1, 1, 1);
-
+	
 	Ray r(ray.o, ray.d);
 
 	// Scene intersection
@@ -61,8 +61,9 @@ __device__ void directLighting(const unsigned int idx, const Ray &ray,
 
 	scene.intersect(r, &mesh, t, n);
 
-	if (mesh->emission > EPSILON) {
-		rad += reflRad * mesh->emission;
+	Material mat = scene.dev_materials[mesh->materialIndex];
+	if (mat.emission.length() > EPSILON) {
+		rad += reflRad * mat.emission.length();
 		return;
 	}
 
@@ -70,7 +71,8 @@ __device__ void directLighting(const unsigned int idx, const Ray &ray,
 	Mesh light;
 	for (int i = 0; i < scene.meshCount; i++) {
 		Mesh m = scene.dev_meshes[i];
-		if (m.emission > 1) {
+		Material lightMat = scene.dev_materials[mesh->materialIndex];
+		if (lightMat.emission.length() > 1) {
 			light = m;
 			break;
 		}
@@ -86,10 +88,11 @@ __device__ void directLighting(const unsigned int idx, const Ray &ray,
 	// Apply BRDF
 	float cos = dot(n, r.d);
 	float brdf = 2.0f;
-	reflRad *= mesh->albedo * cos * brdf;
+	reflRad *= mat.albedo * cos * brdf;
 
 	// Scene intersection
 	scene.intersect(r, &mesh, t, n);
+	mat = scene.dev_materials[mesh->materialIndex];
 
 	r.o = r.o + r.d * t;
 	float diff = (r.o - sample).length();
@@ -97,8 +100,8 @@ __device__ void directLighting(const unsigned int idx, const Ray &ray,
 	float G = (cos * dot(n, -r.d)) / (t * t);
 
 	// Check if we hit the light
-	if (mesh->emission > EPSILON) {
-		rad += reflRad * mesh->emission * G / (1.0f / 13560);
+	if (mat.emission.length() > EPSILON) {
+		rad += reflRad * mat.emission.length() * G / (1.0f / 13560);
 		return;
 	}
 }
@@ -123,12 +126,13 @@ __device__ void indirectLighting(const unsigned int idx, const Ray &ray,
 		Mesh *mesh;
 
 		scene.intersect(r, &mesh, t, n);
+		Material mat = scene.dev_materials[mesh->materialIndex];
 
 		if (t < CAMERA_FAR) {
-			if (mesh->emission > EPSILON) {
+			if (mat.emission.length() > EPSILON) {
 				// We hit a light, set the total radiance
 				float rrWeight = 1 / (1 - ABSORPTION);
-				rad = reflRad * mesh->emission * rrWeight;
+				rad = reflRad * mat.emission.length() * rrWeight;
 				return;
 			}
 
@@ -138,7 +142,7 @@ __device__ void indirectLighting(const unsigned int idx, const Ray &ray,
 
 			float cos = dot(n, r.d);
 			float brdf = 2.0f;// ONE_OVER_PI;
-			reflRad *= mesh->albedo * cos * brdf;
+			reflRad *= mat.albedo * cos * brdf;
 		}
 		else {
 			// The ray escaped, no contribution
@@ -184,9 +188,8 @@ cudaError_t uploadMesh(Scene &scene)
 
 	Mesh* h_mesh = new Mesh[scene.meshCount];
 	
-	for (int i = 0; i < scene.meshCount; i++) {
-		printf("Sizes: %d, %d, %d, %d, %f\n", mesh[i].numVerts, mesh[i].numNorms, mesh[i].numFaces, i, mesh[i].emission);
-		printf("%s, %s\n", mesh[i].vertices[0].str().c_str(), mesh[i].normals[0].str().c_str());
+	for (unsigned int i = 0; i < scene.meshCount; i++) {
+		printf("Number of vertices: %d, Number of normals: %d, Number of faces: %d\n", mesh[i].numVerts, mesh[i].numNorms, mesh[i].numFaces);
 		
 		Vector3f* vertices = 0;
 		cudaStatus = cudaMalloc((void**)&vertices, mesh[i].numVerts * sizeof(Vector3f));
@@ -218,14 +221,13 @@ cudaError_t uploadMesh(Scene &scene)
 			fprintf(stderr, "Faces cudaMemcpy failed!");
 		}
 
+		h_mesh[i].materialIndex = mesh[i].materialIndex;
 		h_mesh[i].vertices = vertices;
 		h_mesh[i].normals = normals;
 		h_mesh[i].faces = faces;
 		h_mesh[i].numVerts = mesh[i].numVerts;
 		h_mesh[i].numNorms = mesh[i].numNorms;
 		h_mesh[i].numFaces = mesh[i].numFaces;
-		h_mesh[i].emission = mesh[i].emission;
-		h_mesh[i].albedo = mesh[i].albedo;
 	}
 
 	cudaStatus = cudaMalloc((void**)&scene.dev_meshes, scene.meshCount * sizeof(Mesh));
@@ -235,6 +237,14 @@ cudaError_t uploadMesh(Scene &scene)
 	cudaStatus = cudaMemcpy(scene.dev_meshes, h_mesh, scene.meshCount * sizeof(Mesh), cudaMemcpyHostToDevice);
 	if (cudaStatus != cudaSuccess) {
 		fprintf(stderr, "Meshes cudaMemcpy failed!");
+	}
+	cudaStatus = cudaMalloc((void**)&scene.dev_materials, scene.materialCount * sizeof(Material));
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "Materials cudaMalloc failed!");
+	}
+	cudaStatus = cudaMemcpy(scene.dev_materials, &scene.materials[0], scene.materialCount * sizeof(Material), cudaMemcpyHostToDevice);
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "Materials cudaMemcpy failed!");
 	}
 
 	return cudaStatus;

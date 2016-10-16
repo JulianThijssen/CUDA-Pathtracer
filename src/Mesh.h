@@ -15,8 +15,7 @@ public:
 
 class Mesh {
 public:
-	float emission = 0;
-	Vector3f albedo;
+	unsigned int materialIndex;
 	unsigned int numVerts;
 	unsigned int numNorms;
 	unsigned int numFaces;
