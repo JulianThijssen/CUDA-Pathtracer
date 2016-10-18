@@ -52,7 +52,7 @@ public:
 	CUDA float length() const {
 		return sqrt(x * x + y * y + z * z);
 	}
-	CUDA std::string str() const {
+	__host__ std::string str() const {
 		std::stringstream ss;
 		ss << "(" << x << ", " << y << ", " << z << ")";
 		return ss.str();
@@ -101,6 +101,9 @@ public:
 	}
 	CUDA Vector3f operator-(const Vector3f& v) const {
 		return Vector3f(x - v.x, y - v.y, z - v.z);
+	}
+	CUDA Vector3f operator*(const Vector3f& v) const {
+		return Vector3f(x * v.x, y * v.y, z * v.z);
 	}
 	CUDA Vector3f operator-() const {
 		return Vector3f(-x, -y, -z);

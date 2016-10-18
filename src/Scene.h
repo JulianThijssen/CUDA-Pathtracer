@@ -4,7 +4,7 @@
 
 #define CUDA __host__ __device__
 #define CAMERA_FAR 10000
-#define EPSILON 0.001
+#define EPSILON 0.001f
 
 #include "cuda_runtime.h"
 #include "Ray.h"
@@ -31,7 +31,7 @@ public:
 		t = CAMERA_FAR;
 		bool hit = false;
 
-		for (int j = 0; j < meshCount; j++) {
+		for (unsigned int j = 0; j < meshCount; j++) {
 			Vector3f mesh_n(0, 0, 0);
 
 			float intersect_t = dev_meshes[j].intersect(ray.o + ray.d*EPSILON, ray.d, mesh_n);

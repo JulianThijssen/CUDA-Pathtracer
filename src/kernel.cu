@@ -31,7 +31,7 @@ float randf() {
 	return static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
 }
 
-__device__ Vector3f generateVector(unsigned int idx, curandState *state, Vector3f n) {
+__device__ Vector3f uniformHemisphereSample(unsigned int idx, curandState *state, Vector3f n) {
 	float x = curand_normal(&state[idx]) * 2 - 1;
 	float y = curand_normal(&state[idx]) * 2 - 1;
 	float z = curand_normal(&state[idx]) * 2 - 1;
@@ -40,6 +40,50 @@ __device__ Vector3f generateVector(unsigned int idx, curandState *state, Vector3
 	rand.normalise();
 
 	return (dot(rand, n) > 0) ? rand: -rand;
+}
+
+__device__ Vector3f cosineHemisphereSample(unsigned int idx, curandState *state, Vector3f n) {
+	float u1 = curand_uniform(&state[idx]);
+	float u2 = curand_uniform(&state[idx]);
+
+	float phi = 2 * PI * u2;
+	float cosTheta = sqrtf(1.0 - u1);
+	float sinTheta = sqrtf(1.0 - cosTheta * cosTheta);
+
+	float x = cosf(phi) * sinTheta;
+	float y = sinf(phi) * sinTheta;
+	float z = cosTheta;
+
+	//Vector3f t(n.x, 1, n.z);
+	//if (n.x > 0 - EPSILON && n.x < 0 + EPSILON && n.z > 0 - EPSILON && n.z < 0 + EPSILON) {
+	//	t.set(1, n.y, n.z);
+	//}
+	//Vector3f b = cross(n, t);
+	//b.normalise();
+	//t = cross(b, n);
+
+	//float nx = t.x * x + b.x * y + n.x * z;
+	//float ny = t.y * x + b.y * y + n.y * z;
+	//float nz = t.z * x + b.z * y + n.z * z;
+
+	Vector3f h(n.x, n.y, n.z);
+	Vector3f t = h;
+	if (fabsf(t.x) <= fabsf(t.y) && fabsf(t.x) <= fabsf(t.z))
+		t.x = 1.0;
+	else if (fabsf(t.y) <= fabsf(t.x) && fabsf(t.y) <= fabsf(t.z))
+		t.y = 1.0;
+	else
+		t.z = 1.0;
+
+	Vector3f b = cross(n, t);
+	b.normalise();
+	t = cross(b, n);
+
+	float nx = t.x * x + b.x * y + n.x * z;
+	float ny = t.y * x + b.y * y + n.y * z;
+	float nz = t.z * x + b.z * y + n.z * z;
+
+	return Vector3f(nx, ny, nz);
 }
 
 __global__ void setup_kernel(curandState *state) {
@@ -58,28 +102,33 @@ __device__ void directLighting(const unsigned int idx, const Ray &ray,
 	float t;
 	Vector3f n;
 	Mesh *mesh;
+	bool hit;
 
-	scene.intersect(r, &mesh, t, n);
+	hit = scene.intersect(r, &mesh, t, n);
+
+	// If no hit was found, there will be no lighting
+	if (!hit)
+		return;
 
 	Material mat = scene.dev_materials[mesh->materialIndex];
 	if (mat.emission.length() > EPSILON) {
-		rad += reflRad * mat.emission.length();
+		rad += reflRad * mat.emission;
 		return;
 	}
 
 	// Find the light
-	Mesh light;
-	for (int i = 0; i < scene.meshCount; i++) {
+	Mesh *light = 0;
+	for (unsigned int i = 0; i < scene.meshCount; i++) {
 		Mesh m = scene.dev_meshes[i];
-		Material lightMat = scene.dev_materials[mesh->materialIndex];
+		Material lightMat = scene.dev_materials[m.materialIndex];
 		if (lightMat.emission.length() > 1) {
-			light = m;
+			light = &scene.dev_meshes[i];
 			break;
 		}
 	}
 
 	// Get a random sample on the light
-	Vector3f sample = light.getRandomSample(idx, state);
+	Vector3f sample = light->getRandomSample(idx, state);
 
 	// create a shadow ray to the light sample
 	r.o = r.o + r.d * t;
@@ -89,9 +138,15 @@ __device__ void directLighting(const unsigned int idx, const Ray &ray,
 	float cos = dot(n, r.d);
 	float brdf = 2.0f;
 	reflRad *= mat.albedo * cos * brdf;
-
+	
 	// Scene intersection
-	scene.intersect(r, &mesh, t, n);
+	hit = scene.intersect(r, &mesh, t, n);
+	
+	// If no hit was found, there will be no lighting
+	if (!hit) {
+		return;
+	}
+	
 	mat = scene.dev_materials[mesh->materialIndex];
 
 	r.o = r.o + r.d * t;
@@ -101,7 +156,7 @@ __device__ void directLighting(const unsigned int idx, const Ray &ray,
 
 	// Check if we hit the light
 	if (mat.emission.length() > EPSILON) {
-		rad += reflRad * mat.emission.length() * G / (1.0f / 13560);
+		rad += reflRad * mat.emission * G / (1.0f / 13560);
 		return;
 	}
 }
@@ -132,17 +187,17 @@ __device__ void indirectLighting(const unsigned int idx, const Ray &ray,
 			if (mat.emission.length() > EPSILON) {
 				// We hit a light, set the total radiance
 				float rrWeight = 1 / (1 - ABSORPTION);
-				rad = reflRad * mat.emission.length() * rrWeight;
+				rad += reflRad * mat.emission * rrWeight * 2.0 * PI;
 				return;
 			}
 
 			// Generate new ray from intersection
 			r.o = r.o + r.d * t;
-			r.d = generateVector(idx, state, n);
+			r.d = cosineHemisphereSample(idx, state, n);
 
 			float cos = dot(n, r.d);
 			float brdf = 2.0f;// ONE_OVER_PI;
-			reflRad *= mat.albedo * cos * brdf;
+			reflRad *= mat.albedo;
 		}
 		else {
 			// The ray escaped, no contribution
