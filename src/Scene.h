@@ -14,6 +14,13 @@
 
 #include <vector>
 
+CUDA struct HitInfo {
+	bool hit;
+	float t;
+	Vector3f n;
+	Mesh *mesh;
+};
+
 class Scene
 {
 public:
@@ -27,22 +34,22 @@ public:
 	std::vector<Material> materials;
 
 	// Device
-	__device__ inline bool Scene::intersect(const Ray &ray, Mesh **mesh, float &t, Vector3f &n) const {
-		t = CAMERA_FAR;
-		bool hit = false;
+	__device__ inline HitInfo Scene::intersect(const Ray &ray) const {
+		HitInfo info = { false, 0, Vector3f(), 0 };
+		info.t = CAMERA_FAR;
 
 		for (unsigned int j = 0; j < meshCount; j++) {
-			Vector3f mesh_n(0, 0, 0);
+			Vector3f n(0, 0, 0);
 
-			float intersect_t = dev_meshes[j].intersect(ray.o + ray.d*EPSILON, ray.d, mesh_n);
-			if (intersect_t > 0 && intersect_t < t) {
-				t = intersect_t;
-				n.set(mesh_n);
-				*mesh = &dev_meshes[j];
-				hit = true;
+			float t = dev_meshes[j].intersect(ray.o + ray.d*EPSILON, ray.d, n);
+			if (t > 0 && t < info.t) {
+				info.t = t;
+				info.n.set(n);
+				info.mesh = &dev_meshes[j];
+				info.hit = true;
 			}
 		}
-		return hit;
+		return info;
 	}
 
 	Mesh *dev_meshes;

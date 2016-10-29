@@ -87,18 +87,13 @@ __device__ void directLighting(const unsigned int idx, const Ray &ray,
 	Ray r(ray.o, ray.d);
 
 	// Scene intersection
-	float t;
-	Vector3f n;
-	Mesh *mesh;
-	bool hit;
-
-	hit = scene.intersect(r, &mesh, t, n);
+	HitInfo info = scene.intersect(r);
 
 	// If no hit was found, there will be no lighting
-	if (!hit)
+	if (!info.hit)
 		return;
 
-	Material mat = scene.dev_materials[mesh->materialIndex];
+	Material mat = scene.dev_materials[info.mesh->materialIndex];
 	if (mat.emission.length() > EPSILON) {
 		rad += reflRad * mat.emission;
 		return;
@@ -119,28 +114,28 @@ __device__ void directLighting(const unsigned int idx, const Ray &ray,
 	Vector3f sample = light->getRandomSample(idx, state);
 
 	// create a shadow ray to the light sample
-	r.o = r.o + r.d * t;
+	r.o = r.o + r.d * info.t;
 	r.d = (sample - r.o).normalise();
 
 	// Apply BRDF
-	float cos = dot(n, r.d);
+	float cos = dot(info.n, r.d);
 	float brdf = 2.0f;
 	reflRad *= mat.albedo * cos * brdf;
 	
 	// Scene intersection
-	hit = scene.intersect(r, &mesh, t, n);
+	info = scene.intersect(r);
 	
 	// If no hit was found, there will be no lighting
-	if (!hit) {
+	if (!info.hit) {
 		return;
 	}
 	
-	mat = scene.dev_materials[mesh->materialIndex];
+	mat = scene.dev_materials[info.mesh->materialIndex];
 
-	r.o = r.o + r.d * t;
+	r.o = r.o + r.d * info.t;
 	float diff = (r.o - sample).length();
 
-	float G = (cos * dot(n, -r.d)) / (t * t);
+	float G = (cos * dot(info.n, -r.d)) / (info.t * info.t);
 
 	// Check if we hit the light
 	if (mat.emission.length() > EPSILON) {
@@ -164,24 +159,20 @@ __device__ void indirectLighting(const unsigned int idx, const Ray &ray,
 		}
 
 		// Scene intersection
-		float t;
-		Vector3f n;
-		Mesh *mesh;
+		HitInfo info = scene.intersect(r);
+		Material mat = scene.dev_materials[info.mesh->materialIndex];
 
-		scene.intersect(r, &mesh, t, n);
-		Material mat = scene.dev_materials[mesh->materialIndex];
-
-		if (t < CAMERA_FAR) {
+		if (info.t < CAMERA_FAR) {
 			if (mat.emission.length() > EPSILON) {
 				// We hit a light, set the total radiance
-				float rrWeight = 1 / (1 - ABSORPTION);
-				rad += reflRad * mat.emission * rrWeight * 2.0 * PI;
+				float rrWeight = 1.0f / (1.0f - ABSORPTION);
+				rad += reflRad * mat.emission * rrWeight * 2.0f * PI;
 				return;
 			}
 
 			// Generate new ray from intersection
-			r.o = r.o + r.d * t;
-			r.d = cosineHemisphereSample(idx, state, n);
+			r.o = r.o + r.d * info.t;
+			r.d = cosineHemisphereSample(idx, state, info.n);
 
 			reflRad *= mat.albedo;
 		}
