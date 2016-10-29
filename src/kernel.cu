@@ -17,7 +17,7 @@
 #define DEVICE __device__
 #define CAMERA_FAR 10000
 #define ITERATIONS 5
-#define NUM_THREADS 32
+#define NUM_THREADS 64
 #define EPSILON 0.001
 #define ABSORPTION 0.25
 
