@@ -54,18 +54,6 @@ __device__ Vector3f cosineHemisphereSample(unsigned int idx, curandState *state,
 	float y = sinf(phi) * sinTheta;
 	float z = cosTheta;
 
-	//Vector3f t(n.x, 1, n.z);
-	//if (n.x > 0 - EPSILON && n.x < 0 + EPSILON && n.z > 0 - EPSILON && n.z < 0 + EPSILON) {
-	//	t.set(1, n.y, n.z);
-	//}
-	//Vector3f b = cross(n, t);
-	//b.normalise();
-	//t = cross(b, n);
-
-	//float nx = t.x * x + b.x * y + n.x * z;
-	//float ny = t.y * x + b.y * y + n.y * z;
-	//float nz = t.z * x + b.z * y + n.z * z;
-
 	Vector3f h(n.x, n.y, n.z);
 	Vector3f t = h;
 	if (fabsf(t.x) <= fabsf(t.y) && fabsf(t.x) <= fabsf(t.z))
@@ -195,8 +183,6 @@ __device__ void indirectLighting(const unsigned int idx, const Ray &ray,
 			r.o = r.o + r.d * t;
 			r.d = cosineHemisphereSample(idx, state, n);
 
-			float cos = dot(n, r.d);
-			float brdf = 2.0f;// ONE_OVER_PI;
 			reflRad *= mat.albedo;
 		}
 		else {
@@ -224,7 +210,7 @@ __global__ void traceKernel(float* out, const int w, const int h,
 
 	Vector3f rad(0, 0, 0);
 
-	//directLighting(idx, ray, rad, scene, state);
+	directLighting(idx, ray, rad, scene, state);
 	indirectLighting(idx, ray, rad, scene, state);
 
 	out[y * w * 3 + x * 3 + 0] += rad.x;
@@ -235,7 +221,7 @@ __global__ void traceKernel(float* out, const int w, const int h,
 cudaError_t uploadMesh(Scene &scene)
 {
 	Mesh* mesh = new Mesh[scene.meshCount];
-	for (int i = 0; i < scene.meshCount; i++) {
+	for (unsigned int i = 0; i < scene.meshCount; i++) {
 		memcpy(&mesh[i], &scene.getMesh(i), sizeof(Mesh));
 	}
 	
@@ -358,6 +344,11 @@ cudaError_t destroy(curandState** d_state) {
 	cudaError_t cudaStatus;
 
 	cudaFree(d_state);
+
+	cudaStatus = cudaGetLastError();
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "Freeing CUDA failed: %s\n", cudaGetErrorString(cudaStatus));
+	}
 
 	return cudaStatus;
 }
