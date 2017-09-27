@@ -20,7 +20,4 @@
 
 # Project
 *.cu.cache
-PathTracer/src/
-PathTracer/Debug/
-PathTracer/Release/
-PathTracer/x64
+build
