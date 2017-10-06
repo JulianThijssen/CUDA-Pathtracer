@@ -183,7 +183,7 @@ __device__ void indirectLighting(const unsigned int idx, const Ray &ray,
 	}
 }
 
-__global__ void traceKernel(float* out, const int w, const int h,
+__global__ void traceKernel(Vector3f* out, const int w, const int h,
 	const Vector3f o, const Basis basis, const Scene scene, curandState *state)
 {
 	unsigned int idx = blockIdx.x*blockDim.x + threadIdx.x;
@@ -199,14 +199,13 @@ __global__ void traceKernel(float* out, const int w, const int h,
 	Vector3f rayD = ((((basis.x * aspect * uvx) + (basis.y * uvy)) * 0.33135) + basis.z).normalise();
 	Ray ray(rayO, rayD);
 
-	Vector3f rad(0, 0, 0);
+	Vector3f Radiance(0, 0, 0);
 
-	directLighting(idx, ray, rad, scene, state);
-	indirectLighting(idx, ray, rad, scene, state);
+	//directLighting(idx, ray, scene, state);
+	//indirectLighting(idx, ray, scene, state);
+	Radiance += computeRadiance(scene, ray, idx, state);
 
-	out[y * w * 3 + x * 3 + 0] += rad.x;
-	out[y * w * 3 + x * 3 + 1] += rad.y;
-	out[y * w * 3 + x * 3 + 2] += rad.z;
+	out[y * w + x] += Radiance;
 }
 
 cudaError_t uploadMesh(Scene &scene)
@@ -303,7 +302,7 @@ Error:
 	return cudaStatus;
 }
 
-cudaError_t trace(float** dev_out, const Vector3f& o, const Vector3f& d, uint width, uint height, const Scene &scene, curandState* d_state) {
+cudaError_t trace(Vector3f** dev_out, const Vector3f& o, const Vector3f& d, uint width, uint height, const Scene &scene, curandState* d_state) {
 	cudaError_t cudaStatus;
 	
 	unsigned int blockSize = NUM_THREADS;

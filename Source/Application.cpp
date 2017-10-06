@@ -22,7 +22,7 @@ int main()
 	window.getSize(width, height);
 
 	float* out = new float[width * height * 3];
-	float* dev_out = 0;
+	Vector3f* dev_out = 0;
 
 	cudaError_t cudaStatus;
 
@@ -39,7 +39,7 @@ int main()
 	}
 
 	// Make output
-	cudaStatus = cudaMalloc((void**)&dev_out, width * height * 3 * sizeof(float));
+	cudaStatus = cudaMalloc((void**)&dev_out, width * height * sizeof(Vector3f));
 	if (cudaStatus != cudaSuccess) {
 		fprintf(stderr, "dev_out cudaMalloc failed!");
 		exit(1);
