@@ -30,6 +30,7 @@ public:
 
 	/* Core */
 	CUDA Vector3f() : x(0), y(0), z(0) {}
+	CUDA Vector3f(float a) : x(a), y(a), z(a) {}
 	CUDA Vector3f(float x, float y, float z) : x(x), y(y), z(z) {}
 	CUDA void set(float x, float y, float z) {
 		this->x = x;
