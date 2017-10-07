@@ -21,7 +21,7 @@ int main()
 	unsigned int width, height;
 	window.getSize(width, height);
 
-	float* out = new float[width * height * 3];
+	Vector3f* out = new Vector3f[width * height];
 	Vector3f* dev_out = 0;
 
 	cudaError_t cudaStatus;
@@ -72,14 +72,14 @@ int main()
 		iterations++;
 
 		// Copy output vector from GPU buffer to host memory.
-		cudaStatus = cudaMemcpy(out, dev_out, width * height * 3 * sizeof(float), cudaMemcpyDeviceToHost);
+		cudaStatus = cudaMemcpy(out, dev_out, width * height * sizeof(Vector3f), cudaMemcpyDeviceToHost);
 		if (cudaStatus != cudaSuccess) {
 			fprintf(stderr, "dev_out -> out cudaMemcpy failed!");
 			exit(1);
 		}
 		
 		// Divide the accumulated buffer by the iterations
-		for (unsigned int i = 0; i < width * height * 3; i++) {
+		for (unsigned int i = 0; i < width * height; i++) {
 			out[i] /= iterations;
 		}
 
