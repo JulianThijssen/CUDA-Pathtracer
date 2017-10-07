@@ -117,11 +117,10 @@ __device__ Vector3f CookTorrance(Vector3f N, Vector3f V, Vector3f H, Vector3f L,
 	return (F * D * G) / (4.0 * NdotL * NdotV);
 }
 
+__device__ Vector3f directIllumination(const Scene& scene, Vector3f x, HitInfo info, const unsigned int idx, curandState *state) {
+	Vector3f Radiance;
+
 	Material mat = scene.dev_materials[info.mesh->materialIndex];
-	if (mat.emission.length() > EPSILON) {
-		rad += reflRad * mat.emission;
-		return;
-	}
 
 	// Find the light
 	Mesh *light = 0;
@@ -138,73 +137,105 @@ __device__ Vector3f CookTorrance(Vector3f N, Vector3f V, Vector3f H, Vector3f L,
 	Vector3f sample = light->getRandomSample(idx, state);
 
 	// create a shadow ray to the light sample
-	r.o = r.o + r.d * info.t;
-	r.d = (sample - r.o).normalise();
+	Ray r(x, (sample - x).normalise());
+
+	Vector3f L = r.d;
+	//Vector3f H = (L + V).normalise();
 
 	// Apply BRDF
-	float cos = dot(info.n, r.d);
-	float brdf = 2.0f;
-	reflRad *= mat.albedo * cos * brdf;
-	
+	float cos = CosTheta(info.n, L);
+	Vector3f LambertBRDF = (mat.albedo / PI);
+	//Vector3f CookBRDF = CookTorrance(info.n, V, H, L, mat.albedo, 0, 1);
+	Vector3f BRDF = (LambertBRDF);// +CookBRDF);
+
 	// Scene intersection
-	info = scene.intersect(r);
-	
+	info = trace(scene, r);
+
 	// If no hit was found, there will be no lighting
 	if (!info.hit) {
-		return;
+		return Radiance;
 	}
-	
+
 	mat = scene.dev_materials[info.mesh->materialIndex];
 
-	r.o = r.o + r.d * info.t;
-	float diff = (r.o - sample).length();
+	x = r.o + r.d * info.t;
 
-	float G = (cos * dot(info.n, -r.d)) / (info.t * info.t);
+	float G = (cos * CosTheta(info.n, -L)) / (info.t * info.t);
 
 	// Check if we hit the light
 	if (mat.emission.length() > EPSILON) {
-		rad += reflRad * mat.emission * G / (1.0f / 13560);
-		return;
+		Radiance = (mat.emission * BRDF * G) / (1.0f / 13560);
+		return Radiance;
 	}
+	return Radiance;
 }
 
-__device__ void indirectLighting(const unsigned int idx, const Ray &ray,
-	Vector3f &rad, const Scene &scene, curandState *state)
-{
-	Ray r(ray.o, ray.d);
+__device__ HitInfo trace(const Scene& scene, Ray ray) {
+	return scene.intersect(ray);
+}
 
-	Vector3f reflRad = Vector3f(1, 1, 1);
-	while (true) {
-		float p = curand_uniform(&state[idx]);
+__device__ Vector3f computeRadiance(const Scene& scene, Ray r, const unsigned int idx, curandState *state) {
+	Vector3f Radiance;
+	
+	Vector3f PreRadiance[30];
+	HitInfo hits[30];
+	Vector3f psi[30];
+	int index = 0;
 
-		// Russian Roulette
-		if (p < ABSORPTION) {
-			return;
-		}
+	float rrWeight = 1.0f / (1.0f - ABSORPTION);
+	do {
+		HitInfo info = trace(scene, r);
+		hits[index] = info;
+		Vector3f x = r.o + r.d * info.t;
 
-		// Scene intersection
-		HitInfo info = scene.intersect(r);
-		Material mat = scene.dev_materials[info.mesh->materialIndex];
+		if (info.hit && info.t < CAMERA_FAR) {
+			Material mat = scene.dev_materials[info.mesh->materialIndex];
 
-		if (info.t < CAMERA_FAR) {
-			if (mat.emission.length() > EPSILON) {
-				// We hit a light, set the total radiance
-				float rrWeight = 1.0f / (1.0f - ABSORPTION);
-				rad += reflRad * mat.emission * rrWeight * 2.0f * PI;
-				return;
+			Vector3f Ld;
+			Ld += mat.emission;
+			Ld += directIllumination(scene, x, info, idx, state);
+			
+			PreRadiance[index] = Ld;
+
+			Ray newRay(x, cosineHemisphereSample(idx, state, info.n));
+			r.o = newRay.o;
+			r.d = newRay.d;
+			psi[index] = r.d;
+
+			float p = curand_uniform(&state[idx]);
+
+			// Russian Roulette
+			if (p < ABSORPTION) {
+				break;
 			}
 
-			// Generate new ray from intersection
-			r.o = r.o + r.d * info.t;
-			r.d = cosineHemisphereSample(idx, state, info.n);
-
-			reflRad *= mat.albedo;
+			index++;
 		}
 		else {
-			// The ray escaped, no contribution
-			return;
+			PreRadiance[index] = Vector3f(0);
+			break;
+		}
+	} while (index < 30);
+
+	Radiance = PreRadiance[index];
+	if (index > 0) {
+		for (int i = index - 1; i >= 0; i--) {
+			HitInfo info = hits[i];
+			Vector3f Ld = PreRadiance[i];
+			Vector3f L = psi[i];
+
+			Material mat = scene.dev_materials[info.mesh->materialIndex];
+
+			Vector3f LambertBRDF = (mat.albedo / PI);
+			//Vector3f CookBRDF = CookTorrance(info.n, V, H, L, mat.albedo, 0, 1);
+			Vector3f BRDF = (LambertBRDF);// + CookBRDF);
+			float cos = CosTheta(info.n, L);
+
+			Radiance = Ld + Radiance * BRDF * cos * rrWeight;
 		}
 	}
+
+	return Radiance;
 }
 
 __global__ void traceKernel(Vector3f* out, const int w, const int h,
@@ -223,11 +254,7 @@ __global__ void traceKernel(Vector3f* out, const int w, const int h,
 	Vector3f rayD = ((((basis.x * aspect * uvx) + (basis.y * uvy)) * 0.33135) + basis.z).normalise();
 	Ray ray(rayO, rayD);
 
-	Vector3f Radiance(0, 0, 0);
-
-	//directLighting(idx, ray, scene, state);
-	//indirectLighting(idx, ray, scene, state);
-	Radiance += computeRadiance(scene, ray, idx, state);
+	Vector3f Radiance = computeRadiance(scene, ray, idx, state);
 
 	out[y * w + x] += Radiance;
 }
