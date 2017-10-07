@@ -7,6 +7,7 @@ Scene::Scene()
 
 Scene::~Scene()
 {
+
 }
 
 Mesh &Scene::getMesh(unsigned int i) {

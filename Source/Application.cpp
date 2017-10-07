@@ -93,6 +93,13 @@ int main()
 		frames++;
 	}
 
+	delete out;
+
+	cudaStatus = cudaFree(dev_out);
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "Failed to free device pixelbuffer!");
+		exit(1);
+	}
 	destroy(&d_state);
 
 	// cudaDeviceReset must be called before exiting in order for profiling and
