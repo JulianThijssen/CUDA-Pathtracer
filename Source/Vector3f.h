@@ -115,6 +115,9 @@ public:
 	CUDA Vector3f operator/(float divisor) const {
 		return Vector3f(x / divisor, y / divisor, z / divisor);
 	}
+    CUDA Vector3f operator/(const Vector3f& v) const {
+        return Vector3f(x / v.x, y / v.y, z / v.z);
+    }
 };
 
 const Vector3f ZERO = Vector3f(0, 0, 0);
