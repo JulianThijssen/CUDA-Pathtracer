@@ -28,9 +28,9 @@ public:
 	CUDA ~Scene();
 
 	// Host
-	Mesh &getMesh(unsigned int i);
-	void addMesh(Mesh &mesh);
-	std::vector<Mesh> meshes;
+	Mesh* getMesh(unsigned int i);
+	void addMesh(Mesh *mesh);
+	std::vector<Mesh*> meshes;
 	std::vector<Material> materials;
 
 	// Device

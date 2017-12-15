@@ -10,10 +10,10 @@ Scene::~Scene()
 
 }
 
-Mesh &Scene::getMesh(unsigned int i) {
+Mesh *Scene::getMesh(unsigned int i) {
 	return meshes[i];
 }
 
-void Scene::addMesh(Mesh &mesh) {
+void Scene::addMesh(Mesh *mesh) {
 	meshes.push_back(mesh);
 }

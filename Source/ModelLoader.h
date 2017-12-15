@@ -41,7 +41,7 @@ void loadScene(Scene &scene, std::string path) {
 	if (!aiScene) {
 		Log::error(importer.GetErrorString());
 	}
-
+    
 	scene.meshCount = aiScene->mNumMeshes;
 	scene.materialCount = aiScene->mNumMaterials;
 
@@ -76,7 +76,7 @@ void loadScene(Scene &scene, std::string path) {
 			m->faces[j].n2 = aiMesh->mFaces[j].mIndices[2];
 		}
 
-		scene.addMesh(*m);
+		scene.addMesh(m);
 	}
 
 	for (unsigned int i = 0; i < scene.materialCount; i++) {
@@ -135,7 +135,7 @@ void loadMesh(Scene &scene, std::string path) {
 			m->numVerts = (unsigned int) vertices.size();
 			m->numNorms = (unsigned int) normals.size();
 			m->numFaces = (unsigned int) faces.size();
-			scene.addMesh(*m);
+			scene.addMesh(m);
 
 			m = new Mesh();
 			vertices.clear();
