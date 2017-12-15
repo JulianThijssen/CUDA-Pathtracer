@@ -144,7 +144,7 @@ __device__ Vector3f directIllumination(const Scene& scene, Vector3f x, HitInfo i
 	// Find the light
 	Mesh *light = 0;
 	for (unsigned int i = 0; i < scene.meshCount; i++) {
-		Mesh m = scene.dev_meshes[i];
+		Mesh& m = scene.dev_meshes[i];
 		Material lightMat = scene.dev_materials[m.materialIndex];
 		if (lightMat.emission.length() > 1) {
 			light = &scene.dev_meshes[i];
@@ -282,7 +282,7 @@ cudaError_t uploadMesh(Scene &scene)
 {
 	Mesh* mesh = new Mesh[scene.meshCount];
 	for (unsigned int i = 0; i < scene.meshCount; i++) {
-		memcpy(&mesh[i], &scene.getMesh(i), sizeof(Mesh));
+		memcpy(&mesh[i], scene.getMesh(i), sizeof(Mesh));
 	}
 	
 	cudaError_t cudaStatus;
