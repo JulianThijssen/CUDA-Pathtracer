@@ -184,7 +184,6 @@ __device__ Vector3f directIllumination(const Scene& scene, Vector3f x, HitInfo i
 	// Check if we hit the light
 	if (mat.emission.length() > EPSILON) {
 		Radiance = (mat.emission * BRDF * G) / (1.0f / 13560);
-		return Radiance;
 	}
 	return Radiance;
 }
@@ -193,7 +192,7 @@ __device__ HitInfo trace(const Scene& scene, Ray ray) {
 	return scene.intersect(ray);
 }
 
-__device__ Vector3f computeRadiance(const Scene& scene, Ray r, const unsigned int idx, curandState *state) {
+__device__ Vector3f computeRadiance(const Scene& scene, Ray r, const Vector3f& camPos, const unsigned int idx, curandState *state) {
 	Vector3f Radiance;
 	
 	Vector3f PreRadiance[30];
@@ -242,6 +241,7 @@ __device__ Vector3f computeRadiance(const Scene& scene, Ray r, const unsigned in
 			HitInfo info = hits[i];
 			Vector3f Ld = PreRadiance[i];
 			Vector3f L = psi[i];
+			//Vector3f V = (camPos - x).normalise();
 
 			Material mat = scene.dev_materials[info.mesh->materialIndex];
 
@@ -273,7 +273,11 @@ __global__ void traceKernel(Vector3f* out, const int w, const int h,
 	Vector3f rayD = ((((basis.x * aspect * uvx) + (basis.y * uvy)) * 0.33135) + basis.z).normalise();
 	Ray ray(rayO, rayD);
 
-	Vector3f Radiance = computeRadiance(scene, ray, idx, state);
+	Vector3f camPos = ray.o;
+
+	Vector3f Radiance = computeRadiance(scene, ray, camPos, idx, state);
+
+    Radiance *= Vector3f(1.5f) / ((Radiance / 1.5f) + 1);
 
 	out[y * w + x] += Radiance;
 }
