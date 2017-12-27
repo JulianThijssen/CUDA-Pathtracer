@@ -123,6 +123,9 @@ __device__ float Schlick(float NdotL, float NdotV, float Roughness) {
     return G1 * G2;
 }
 
+__device__ Vector3f Lambert(Vector3f Kd) {
+    return Kd / PI;
+}
 __device__ Vector3f CookTorrance(Vector3f N, Vector3f V, Vector3f H, Vector3f L, Vector3f BaseColor, float Metalness, float Roughness) {
     float NdotH = gmax(0.0f, dot(N, H));
     float NdotV = gmax(1e-7f, dot(N, V));
@@ -163,11 +166,11 @@ __device__ Vector3f directIllumination(const Scene& scene, Vector3f x, HitInfo i
 
     // Apply BRDF
     float cos = CosTheta(info.n, L);
-    Vector3f LambertBRDF = (mat.albedo / PI);
+    Vector3f LambertBRDF = Lambert(mat.albedo);
     //Vector3f CookBRDF = CookTorrance(info.n, V, H, L, mat.albedo, 0, 1);
-    Vector3f BRDF = (LambertBRDF);// +CookBRDF);
+    Vector3f BRDF = (LambertBRDF);// + CookBRDF);
 
-                                  // Scene intersection
+    // Scene intersection
     info = trace(scene, r);
 
     // If no hit was found, there will be no lighting
@@ -245,7 +248,7 @@ __device__ Vector3f computeRadiance(const Scene& scene, Ray r, const Vector3f& c
 
             Material mat = scene.dev_materials[info.mesh->materialIndex];
 
-            Vector3f LambertBRDF = (mat.albedo / PI);
+            Vector3f LambertBRDF = Lambert(mat.albedo);
             //Vector3f CookBRDF = CookTorrance(info.n, V, H, L, mat.albedo, 0, 1);
             Vector3f BRDF = (LambertBRDF);// + CookBRDF);
             float cos = CosTheta(info.n, L);
