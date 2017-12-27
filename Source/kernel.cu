@@ -99,7 +99,7 @@ __global__ void setup_kernel(curandState *state) {
 
 /* Calculates the diffuse contribution of the light */
 __device__ float CosTheta(Vector3f N, Vector3f L) {
-    return clamp(dot(N, L), 0, 1);
+    return gmax(0, dot(N, L));
 }
 
 __device__ Vector3f Fresnel(Vector3f BaseColor, float Metalness, float b) {
