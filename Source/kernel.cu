@@ -139,6 +139,14 @@ __device__ Vector3f CookTorrance(Vector3f N, Vector3f V, Vector3f H, Vector3f L,
     return (F * D * G) / (4.0 * NdotL * NdotV);
 }
 
+__device__ Vector3f BRDF(Vector3f N, Vector3f L, Material& material) {
+    float cos = CosTheta(N, L);
+    Vector3f LambertBRDF = Lambert(material.albedo);
+    //Vector3f CookBRDF = CookTorrance(info.n, V, H, L, mat.albedo, 0, 1);
+
+    return (LambertBRDF);
+}
+
 __device__ Vector3f directIllumination(const Scene& scene, Vector3f x, HitInfo info, const unsigned int idx, curandState *state) {
     Vector3f Radiance;
 
@@ -164,11 +172,10 @@ __device__ Vector3f directIllumination(const Scene& scene, Vector3f x, HitInfo i
     Vector3f L = r.d;
     //Vector3f H = (L + V).normalise();
 
-    // Apply BRDF
     float cos = CosTheta(info.n, L);
-    Vector3f LambertBRDF = Lambert(mat.albedo);
-    //Vector3f CookBRDF = CookTorrance(info.n, V, H, L, mat.albedo, 0, 1);
-    Vector3f BRDF = (LambertBRDF);// + CookBRDF);
+
+    // Apply BRDF
+    Vector3f brdf = BRDF(info.n, L, mat);
 
     // Scene intersection
     info = trace(scene, r);
@@ -186,7 +193,7 @@ __device__ Vector3f directIllumination(const Scene& scene, Vector3f x, HitInfo i
 
     // Check if we hit the light
     if (mat.emission.length() > EPSILON) {
-        Radiance = (mat.emission * BRDF * G * 13650);
+        Radiance = (mat.emission * brdf * G * 13650);
     }
     return Radiance;
 }
@@ -251,12 +258,12 @@ __device__ Vector3f computeRadiance(const Scene& scene, Ray r, const Vector3f& c
 
             Material mat = scene.dev_materials[info.mesh->materialIndex];
 
-            Vector3f LambertBRDF = Lambert(mat.albedo);
-            //Vector3f CookBRDF = CookTorrance(info.n, V, H, L, mat.albedo, 0, 1);
-            Vector3f BRDF = (LambertBRDF);// + CookBRDF);
+            // Apply BRDF
+            Vector3f brdf = BRDF(info.n, L, mat);
+
             float cos = CosTheta(info.n, L);
 
-            Radiance = Ld + (Radiance * BRDF * cos * rrWeight);
+            Radiance = Ld + (Radiance * brdf * cos * rrWeight);
         }
     }
 
