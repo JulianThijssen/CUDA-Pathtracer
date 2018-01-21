@@ -191,6 +191,13 @@ __device__ Vector3f directIllumination(const Scene& scene, Vector3f x, HitInfo i
     return Radiance;
 }
 
+// Russian Roulette
+__device__ bool isAbsorbed(curandState* state) {
+    float p = curand_uniform(state);
+
+    return p < ABSORPTION;
+}
+
 __device__ HitInfo trace(const Scene& scene, Ray ray) {
     return scene.intersect(ray);
 }
@@ -224,12 +231,7 @@ __device__ Vector3f computeRadiance(const Scene& scene, Ray r, const Vector3f& c
             r.d = newRay.d;
             psi[index] = r.d;
 
-            float p = curand_uniform(&state[idx]);
-
-            // Russian Roulette
-            if (p < ABSORPTION) {
-                break;
-            }
+            if (isAbsorbed(&state[idx])) break;
 
             index++;
         }
