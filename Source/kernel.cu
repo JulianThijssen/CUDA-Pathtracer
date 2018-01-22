@@ -20,8 +20,8 @@
 #define EPSILON 0.001
 #define ABSORPTION 0.25
 
-__device__ HitInfo trace(const Scene& scene, Ray ray);
-__device__ Vector3f computeRadiance(const Scene& scene, Ray r, const Vector3f& camPos, const unsigned int idx, curandState *state);
+__device__ HitInfo trace(const GPU_Scene& scene, Ray ray);
+__device__ Vector3f computeRadiance(const GPU_Scene& scene, Ray r, const Vector3f& camPos, const unsigned int idx, curandState *state);
 
 CUDA struct Basis {
     Vector3f x;
@@ -147,7 +147,7 @@ __device__ Vector3f BRDF(Vector3f N, Vector3f L, Material& material) {
     return (LambertBRDF);
 }
 
-__device__ Vector3f directIllumination(const Scene& scene, Vector3f x, HitInfo info, const unsigned int idx, curandState *state) {
+__device__ Vector3f directIllumination(const GPU_Scene& scene, Vector3f x, HitInfo info, const unsigned int idx, curandState *state) {
     Vector3f Radiance;
 
     Material mat = scene.dev_materials[info.mesh->materialIndex];
@@ -205,11 +205,11 @@ __device__ bool isAbsorbed(curandState* state) {
     return p < ABSORPTION;
 }
 
-__device__ HitInfo trace(const Scene& scene, Ray ray) {
+__device__ HitInfo trace(const GPU_Scene& scene, Ray ray) {
     return scene.intersect(ray);
 }
 
-__device__ Vector3f computeRadiance(const Scene& scene, Ray r, const Vector3f& camPos, const unsigned int idx, curandState *state) {
+__device__ Vector3f computeRadiance(const GPU_Scene& scene, Ray r, const Vector3f& camPos, const unsigned int idx, curandState *state) {
     Vector3f Radiance;
 
     Vector3f PreRadiance[30];
@@ -271,7 +271,7 @@ __device__ Vector3f computeRadiance(const Scene& scene, Ray r, const Vector3f& c
 }
 
 __global__ void traceKernel(Vector3f* out, const int w, const int h,
-    const Vector3f o, const Basis basis, const Scene scene, curandState *state)
+    const Vector3f o, const Basis basis, const GPU_Scene scene, curandState *state)
 {
     unsigned int idx = blockIdx.x*blockDim.x + threadIdx.x;
     unsigned int x = idx % w;
@@ -295,7 +295,7 @@ __global__ void traceKernel(Vector3f* out, const int w, const int h,
     out[y * w + x] += Radiance;
 }
 
-cudaError_t uploadMesh(Scene &scene)
+cudaError_t uploadMesh(Scene &scene, GPU_Scene& gpu_scene)
 {
     Mesh* mesh = new Mesh[scene.meshCount];
     for (unsigned int i = 0; i < scene.meshCount; i++) {
@@ -348,22 +348,25 @@ cudaError_t uploadMesh(Scene &scene)
         h_mesh[i].numFaces = mesh[i].numFaces;
     }
 
-    cudaStatus = cudaMalloc((void**)&scene.dev_meshes, scene.meshCount * sizeof(Mesh));
+    cudaStatus = cudaMalloc((void**)&gpu_scene.dev_meshes, scene.meshCount * sizeof(Mesh));
     if (cudaStatus != cudaSuccess) {
         fprintf(stderr, "Meshes cudaMalloc failed!");
     }
-    cudaStatus = cudaMemcpy(scene.dev_meshes, h_mesh, scene.meshCount * sizeof(Mesh), cudaMemcpyHostToDevice);
+    cudaStatus = cudaMemcpy(gpu_scene.dev_meshes, h_mesh, scene.meshCount * sizeof(Mesh), cudaMemcpyHostToDevice);
     if (cudaStatus != cudaSuccess) {
         fprintf(stderr, "Meshes cudaMemcpy failed!");
     }
-    cudaStatus = cudaMalloc((void**)&scene.dev_materials, scene.materialCount * sizeof(Material));
+    cudaStatus = cudaMalloc((void**)&gpu_scene.dev_materials, scene.materialCount * sizeof(Material));
     if (cudaStatus != cudaSuccess) {
         fprintf(stderr, "Materials cudaMalloc failed!");
     }
-    cudaStatus = cudaMemcpy(scene.dev_materials, &scene.materials[0], scene.materialCount * sizeof(Material), cudaMemcpyHostToDevice);
+    cudaStatus = cudaMemcpy(gpu_scene.dev_materials, &scene.materials[0], scene.materialCount * sizeof(Material), cudaMemcpyHostToDevice);
     if (cudaStatus != cudaSuccess) {
         fprintf(stderr, "Materials cudaMemcpy failed!");
     }
+
+    gpu_scene.materialCount = scene.materialCount;
+    gpu_scene.meshCount = scene.meshCount;
 
     return cudaStatus;
 }
@@ -389,7 +392,7 @@ Error:
     return cudaStatus;
 }
 
-cudaError_t trace(Vector3f** dev_out, const Vector3f& o, const Vector3f& d, uint width, uint height, const Scene &scene, curandState* d_state) {
+cudaError_t trace(Vector3f** dev_out, const Vector3f& o, const Vector3f& d, uint width, uint height, const GPU_Scene &scene, curandState* d_state) {
     cudaError_t cudaStatus;
 
     unsigned int blockSize = NUM_THREADS;

@@ -13,6 +13,7 @@ int main()
 {
 	Window window("Path Tracer", 512, 512);
 	Scene scene;
+    GPU_Scene gpu_scene;
 	
 	Vector3f o(278, 273, -800);
 	const Vector3f d(0, 0, 1);
@@ -32,7 +33,7 @@ int main()
 	// Upload the scene
 	loadScene(scene, std::string("res/cornell_box.obj"));
 
-	cudaStatus = uploadMesh(scene);
+	cudaStatus = uploadMesh(scene, gpu_scene);
 	if (cudaStatus != cudaSuccess) {
 		fprintf(stderr, "uploadtriangle failed!");
 		return 1;
@@ -63,7 +64,7 @@ int main()
 		}
 		
 		// Add vectors in parallel.
-		cudaStatus = trace(&dev_out, o, d, width, height, scene, d_state);
+		cudaStatus = trace(&dev_out, o, d, width, height, gpu_scene, d_state);
 		if (cudaStatus != cudaSuccess) {
 			fprintf(stderr, "trace failed!");
 			exit(1);

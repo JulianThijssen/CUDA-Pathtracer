@@ -17,3 +17,14 @@ Mesh *Scene::getMesh(unsigned int i) {
 void Scene::addMesh(Mesh *mesh) {
 	meshes.push_back(mesh);
 }
+
+// Device
+GPU_Scene::GPU_Scene()
+{
+}
+
+
+GPU_Scene::~GPU_Scene()
+{
+
+}
