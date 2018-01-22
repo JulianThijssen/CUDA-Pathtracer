@@ -7,31 +7,31 @@ newmtl White
   # Ambient
   Ka 0.0000 0.0000 0.0000
   # Diffuse
-  Kd 1.0000 1.0000 1.0000
+  Kd 0.725 0.71 0.68
   # Specular
   Ks 0.0000 0.0000 0.0000
   Ns 0.0000
   # Transparency
   Tr 0.0000
   # Emittance
-  Ke 0.0000 0.0000 0.0000
+  Ke 0 0 0
   # Illumination model
   illum 0
 
 newmtl Light
   # Diffuse
-  Kd 1.0 1.0 1.0
+  Kd 0.78 0.78 0.78
   # Emittance
-  Ke 10.0 10.0 10.0
+  Ke 17 12 4
 
 newmtl Red
   # Diffuse
-  Kd 1.0 0.0 0.0
+  Kd 0.63 0.065 0.05
   # Emittance
   Ke 0.0 0.0 0.0
 
 newmtl Green
   # Diffuse
-  Kd 0.0 1.0 0.0
+  Kd 0.14 0.45 0.091
   # Emittance
   Ke 0.0 0.0 0.0
