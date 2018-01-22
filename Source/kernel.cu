@@ -10,15 +10,11 @@
 #include "Ray.h"
 #include "BRDF.h"
 
-#define PI 3.14159265
-#define ONE_OVER_PI 0.318309886
-
 #define CUDA __host__ __device__
 #define HOST __host__
 #define DEVICE __device__
 #define CAMERA_FAR 10000
 #define NUM_THREADS 64
-#define EPSILON 0.001
 #define ABSORPTION 0.25
 
 __device__ HitInfo trace(const GPU_Scene& scene, Ray ray);
@@ -75,22 +71,6 @@ __device__ Vector3f cosineHemisphereSample(unsigned int idx, curandState *state,
     float nz = t.z * x + b.z * y + n.z * z;
 
     return Vector3f(nx, ny, nz);
-}
-
-__device__ float gmin(float a, float b) {
-    return a < b ? a : b;
-}
-
-__device__ float gmax(float a, float b) {
-    return a > b ? a : b;
-}
-
-__device__ Vector3f mix(Vector3f x, Vector3f y, float a) {
-    return x * (1 - a) + y * a;
-}
-
-__device__ float clamp(float x, float low, float high) {
-    return gmin(gmax(x, low), high);
 }
 
 __global__ void setup_kernel(curandState *state) {
