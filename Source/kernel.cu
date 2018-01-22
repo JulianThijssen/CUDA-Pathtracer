@@ -224,7 +224,7 @@ __global__ void traceKernel(Vector3f* out, const int w, const int h,
 
     //Radiance *= Vector3f(2.0f) / ((Radiance / 2.0f) + 1);
 
-    out[y * w + x] += Radiance;
+    out[idx] += Radiance;
 }
 
 cudaError_t uploadMesh(Scene &scene, GPU_Scene& gpu_scene)
@@ -330,7 +330,7 @@ cudaError_t trace(Vector3f** dev_out, const Vector3f& o, const Vector3f& d, uint
     unsigned int blockSize = NUM_THREADS;
     unsigned int gridSize = (width * height) / NUM_THREADS + ((width * height) % NUM_THREADS == 0 ? 0 : 1);
 
-    Vector3f cz = d;
+    Vector3f cz = normalise(d);
     Vector3f cy(0, 1, 0);
     Vector3f cx = cross(cz, cy).normalise();
     cy = cross(cx, cz);

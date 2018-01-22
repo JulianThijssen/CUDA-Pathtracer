@@ -17,7 +17,7 @@ int main()
 	
 	Vector3f o(278, 273, -800);
 	const Vector3f d(0, 0, 1);
-	Mesh* meshes = nullptr;
+
 
 	unsigned int width, height;
 	window.getSize(width, height);
