@@ -8,19 +8,32 @@ find_package(CUDA QUIET REQUIRED)
 #set (${PROJECT}_VERSION_MAJOR 1)
 #set (${PROJECT}_VERSION_MINOR 0)
 
+# Treat .cpp files as .cu files
+set_source_files_properties( ${BASE} PROPERTIES CUDA_SOURCE_PROPERTY_FORMAT OBJ )
+
+# Allow kernel functions to be in a different translation unit
+set(CUDA_SEPARABLE_COMPILATION ON)
+
 set(CMAKE_BINARY_DIR ${CMAKE_SOURCE_DIR}/build/bin)
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR})
+
+# Set the GPU architecture
+set(
+    CUDA_NVCC_FLAGS
+    ${CUDA_NVCC_FLAGS};
+    -O3 -arch=sm_61 
+)
 
 #configure_file (
 #  "${PROJECT_SOURCE_DIR}/${PROJECT}Config.h.in"
 #  "${PROJECT_BINARY_DIR}/${PROJECT}Config.h"
 #)
 
+
 add_subdirectory(Source)
 
 include_directories("${PROJECT_BINARY_DIR}")
-include_directories(${CMAKE_SOURCE_DIR})
 include_directories(${CMAKE_SOURCE_DIR}/3rdParty/Includes/)
 
 cuda_add_executable(${PROJECT}

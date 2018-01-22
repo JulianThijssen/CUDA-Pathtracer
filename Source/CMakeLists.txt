@@ -4,21 +4,20 @@ set(BASE
     ${DIR}/Application.cpp
     ${DIR}/Log.cpp
     ${DIR}/Log.h
-    ${DIR}/Material.h
+    ${DIR}/Maths.h
     ${DIR}/Mesh.h
     ${DIR}/ModelLoader.h
     ${DIR}/Ray.h
-    ${DIR}/Scene.cpp
-    ${DIR}/Scene.h
-    ${DIR}/Vector3f.h
     ${DIR}/Window.cpp
     ${DIR}/Window.h
+    ${DIR}/glad.c
+    ${DIR}/Material.h
+    ${DIR}/Vector3f.h
+    ${DIR}/BRDF.h
+    ${DIR}/Scene.h
+    ${DIR}/Scene.cpp
     ${DIR}/kernel.cu
     ${DIR}/kernel.cuh
-    ${DIR}/glad.c
     PARENT_SCOPE
 )
 
-list(APPEND ENGINE_SOURCES
-    ${BASE}
-)
