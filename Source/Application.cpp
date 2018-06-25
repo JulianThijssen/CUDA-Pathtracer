@@ -15,8 +15,7 @@ int main()
 	Scene scene;
     GPU_Scene gpu_scene;
 	
-	Vector3f o(278, 273, -800);
-	const Vector3f d(0, 0, 1);
+    Camera camera(Vector3f(278, 273, -600), Vector3f(0, 0, 1));
 
 
 	unsigned int width, height;
@@ -64,7 +63,7 @@ int main()
 		}
 		
 		// Add vectors in parallel.
-		cudaStatus = trace(&dev_out, o, d, width, height, gpu_scene, d_state);
+		cudaStatus = trace(&dev_out, camera, width, height, gpu_scene, d_state);
 		if (cudaStatus != cudaSuccess) {
 			fprintf(stderr, "trace failed!");
 			exit(1);

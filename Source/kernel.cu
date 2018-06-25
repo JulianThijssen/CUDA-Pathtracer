@@ -7,6 +7,7 @@
 #include <cfloat>
 #include <string>
 
+#include "Camera.h"
 #include "Ray.h"
 #include "BRDF.h"
 
@@ -324,20 +325,20 @@ Error:
     return cudaStatus;
 }
 
-cudaError_t trace(Vector3f** dev_out, const Vector3f& o, const Vector3f& d, uint width, uint height, const GPU_Scene &scene, curandState* d_state) {
+cudaError_t trace(Vector3f** dev_out, const Camera& camera, uint width, uint height, const GPU_Scene &scene, curandState* d_state) {
     cudaError_t cudaStatus;
 
     unsigned int blockSize = NUM_THREADS;
     unsigned int gridSize = (width * height) / NUM_THREADS + ((width * height) % NUM_THREADS == 0 ? 0 : 1);
 
-    Vector3f cz = normalise(d);
+    Vector3f cz = normalise(camera.direction);
     Vector3f cy(0, 1, 0);
     Vector3f cx = cross(cz, cy).normalise();
     cy = cross(cx, cz);
     Basis basis = { cx, cy, cz };
 
     // Launch a kernel on the GPU with one thread for each element.
-    traceKernel << <gridSize, blockSize >> >(*dev_out, width, height, o, basis, scene, d_state);
+    traceKernel << <gridSize, blockSize >> >(*dev_out, width, height, camera.position, basis, scene, d_state);
 
     //accumKernel << <gridSize, blockSize >> >(*dev_out, 512, 512, dev_out, 1);
 

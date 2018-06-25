@@ -16,8 +16,9 @@ set(BASE
     ${DIR}/BRDF.h
     ${DIR}/Scene.h
     ${DIR}/Scene.cpp
+    ${DIR}/Camera.h
+    ${DIR}/Camera.cpp
     ${DIR}/kernel.cu
     ${DIR}/kernel.cuh
     PARENT_SCOPE
 )
-
