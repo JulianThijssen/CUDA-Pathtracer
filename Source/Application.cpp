@@ -9,6 +9,7 @@
 #include "curand.h"
 
 #include <ctime>
+#include <iostream>
 
 int main()
 {
@@ -32,9 +33,11 @@ int main()
 
 	// Upload the scene
 	loadScene(scene, std::string("res/cornell_box.obj"));
-
-	cudaStatus = uploadMesh(scene, gpu_scene);
-	if (cudaStatus != cudaSuccess) {
+    
+    std::cout << "Uploading scene.." << std::endl;
+	bool success = uploadMesh(scene, gpu_scene);
+    std::cout << "Uploaded scene" << std::endl;
+	if (!success) {
 		fprintf(stderr, "uploadtriangle failed!");
 		return 1;
 	}
