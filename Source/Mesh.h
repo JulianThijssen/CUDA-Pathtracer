@@ -24,9 +24,9 @@ public:
 	Face* faces;
 
 	~Mesh() {
-		delete vertices;
-		delete normals;
-		delete faces;
+		//delete vertices;
+		//delete normals;
+		//delete faces;
 	}
 
 	__device__ inline Vector3f getRandomSample(const unsigned int idx, curandState *state)
