@@ -224,55 +224,51 @@ __global__ void traceKernel(Vector3f* out, const int w, const int h,
 
 cudaError_t uploadMesh(Scene &scene, GPU_Scene& gpu_scene)
 {
-    Mesh* mesh = new Mesh[scene.meshCount];
-    for (unsigned int i = 0; i < scene.meshCount; i++) {
-        memcpy(&mesh[i], scene.getMesh(i), sizeof(Mesh));
-    }
-
     cudaError_t cudaStatus;
 
     Mesh* h_mesh = new Mesh[scene.meshCount];
 
     for (unsigned int i = 0; i < scene.meshCount; i++) {
-        printf("Number of vertices: %d, Number of normals: %d, Number of faces: %d\n", mesh[i].numVerts, mesh[i].numNorms, mesh[i].numFaces);
+        const Mesh* mesh = scene.meshes[i];
+        printf("Number of vertices: %d, Number of normals: %d, Number of faces: %d\n", mesh->numVerts, mesh->numNorms, mesh->numFaces);
 
         Vector3f* vertices = 0;
-        cudaStatus = cudaMalloc((void**)&vertices, mesh[i].numVerts * sizeof(Vector3f));
+        cudaStatus = cudaMalloc((void**)&vertices, mesh->numVerts * sizeof(Vector3f));
         if (cudaStatus != cudaSuccess) {
             fprintf(stderr, "Vertices cudaMalloc failed!");
         }
-        cudaStatus = cudaMemcpy(vertices, mesh[i].vertices, mesh[i].numVerts * sizeof(Vector3f), cudaMemcpyHostToDevice);
+        cudaStatus = cudaMemcpy(vertices, mesh->vertices, mesh->numVerts * sizeof(Vector3f), cudaMemcpyHostToDevice);
         if (cudaStatus != cudaSuccess) {
             fprintf(stderr, "Vertices cudaMemcpy failed!");
         }
 
         Vector3f* normals = 0;
-        cudaStatus = cudaMalloc((void**)&normals, mesh[i].numNorms * sizeof(Vector3f));
+        cudaStatus = cudaMalloc((void**)&normals, mesh->numNorms * sizeof(Vector3f));
         if (cudaStatus != cudaSuccess) {
             fprintf(stderr, "Normals cudaMalloc failed!");
         }
-        cudaStatus = cudaMemcpy(normals, mesh[i].normals, mesh[i].numNorms * sizeof(Vector3f), cudaMemcpyHostToDevice);
+        cudaStatus = cudaMemcpy(normals, mesh->normals, mesh->numNorms * sizeof(Vector3f), cudaMemcpyHostToDevice);
         if (cudaStatus != cudaSuccess) {
             fprintf(stderr, "Vertices cudaMemcpy failed!");
         }
 
         Face* faces = 0;
-        cudaStatus = cudaMalloc((void**)&faces, mesh[i].numFaces * sizeof(Face));
+        cudaStatus = cudaMalloc((void**)&faces, mesh->numFaces * sizeof(Face));
         if (cudaStatus != cudaSuccess) {
             fprintf(stderr, "Faces cudaMalloc failed!");
         }
-        cudaStatus = cudaMemcpy(faces, mesh[i].faces, mesh[i].numFaces * sizeof(Face), cudaMemcpyHostToDevice);
+        cudaStatus = cudaMemcpy(faces, mesh->faces, mesh->numFaces * sizeof(Face), cudaMemcpyHostToDevice);
         if (cudaStatus != cudaSuccess) {
             fprintf(stderr, "Faces cudaMemcpy failed!");
         }
 
-        h_mesh[i].materialIndex = mesh[i].materialIndex;
+        h_mesh[i].materialIndex = mesh->materialIndex;
         h_mesh[i].vertices = vertices;
         h_mesh[i].normals = normals;
         h_mesh[i].faces = faces;
-        h_mesh[i].numVerts = mesh[i].numVerts;
-        h_mesh[i].numNorms = mesh[i].numNorms;
-        h_mesh[i].numFaces = mesh[i].numFaces;
+        h_mesh[i].numVerts = mesh->numVerts;
+        h_mesh[i].numNorms = mesh->numNorms;
+        h_mesh[i].numFaces = mesh->numFaces;
     }
 
     cudaStatus = cudaMalloc((void**)&gpu_scene.dev_meshes, scene.meshCount * sizeof(Mesh));
