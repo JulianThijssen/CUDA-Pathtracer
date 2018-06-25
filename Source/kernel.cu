@@ -14,11 +14,12 @@
 #define CUDA __host__ __device__
 #define HOST __host__
 #define DEVICE __device__
+
 #define NUM_THREADS 64
 #define ABSORPTION 0.25
 
 __device__ HitInfo trace(const GPU_Scene& scene, Ray ray);
-__device__ Vector3f computeRadiance(const GPU_Scene& scene, Ray r, const Vector3f& camPos, const unsigned int idx, curandState *state);
+__device__ Vector3f computeRadiance(const GPU_Scene& scene, Ray r, const Camera& camera, const unsigned int idx, curandState *state);
 
 CUDA struct Basis {
     Vector3f x;
