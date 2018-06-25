@@ -27,10 +27,6 @@ CUDA struct Basis {
     Vector3f z;
 };
 
-float randf() {
-    return static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-}
-
 __device__ Vector3f uniformHemisphereSample(unsigned int idx, curandState *state, Vector3f n) {
     float x = curand_normal(&state[idx]) * 2 - 1;
     float y = curand_normal(&state[idx]) * 2 - 1;
