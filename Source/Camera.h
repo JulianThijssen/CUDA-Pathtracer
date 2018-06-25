@@ -13,4 +13,7 @@ public:
 
     Vector3f position;
     Vector3f direction;
+
+    float zNear = 0.1f;
+    float zFar = 10000;
 };

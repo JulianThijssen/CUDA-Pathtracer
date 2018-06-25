@@ -2,6 +2,7 @@
 
 #include "Scene.h"
 #include "ModelLoader.h"
+#include "Camera.h"
 
 #include <glad/glad.h>
 #include "kernel.cuh"

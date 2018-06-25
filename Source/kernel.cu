@@ -14,7 +14,6 @@
 #define CUDA __host__ __device__
 #define HOST __host__
 #define DEVICE __device__
-#define CAMERA_FAR 10000
 #define NUM_THREADS 64
 #define ABSORPTION 0.25
 
@@ -142,7 +141,7 @@ __device__ HitInfo trace(const GPU_Scene& scene, Ray ray) {
     return scene.intersect(ray);
 }
 
-__device__ Vector3f computeRadiance(const GPU_Scene& scene, Ray r, const Vector3f& camPos, const unsigned int idx, curandState *state) {
+__device__ Vector3f computeRadiance(const GPU_Scene& scene, Ray r, const Camera& camera, const unsigned int idx, curandState *state) {
     Vector3f Radiance;
 
     Vector3f PreRadiance[30];
@@ -155,7 +154,7 @@ __device__ Vector3f computeRadiance(const GPU_Scene& scene, Ray r, const Vector3
         HitInfo info = trace(scene, r);
         hits[index] = info;
 
-        if (info.hit && info.t < CAMERA_FAR) {
+        if (info.hit && info.t < camera.zFar) {
             Material mat = scene.dev_materials[info.mesh->materialIndex];
 
             Vector3f x = r.o + r.d * info.t;
@@ -204,7 +203,7 @@ __device__ Vector3f computeRadiance(const GPU_Scene& scene, Ray r, const Vector3
 }
 
 __global__ void traceKernel(Vector3f* out, const int w, const int h,
-    const Vector3f o, const Basis basis, const GPU_Scene scene, curandState *state)
+    const Camera camera, const Basis basis, const GPU_Scene scene, curandState *state)
 {
     unsigned int idx = blockIdx.x*blockDim.x + threadIdx.x;
     unsigned int x = idx % w;
@@ -215,13 +214,11 @@ __global__ void traceKernel(Vector3f* out, const int w, const int h,
 
     float aspect = (float)w / h;
 
-    Vector3f rayO = o + (basis.x * uvx) + (basis.y * uvy);
+    Vector3f rayO = camera.position + (basis.x * uvx) + (basis.y * uvy);
     Vector3f rayD = ((((basis.x * aspect * uvx) + (basis.y * uvy)) * 0.33135) + basis.z).normalise();
     Ray ray(rayO, rayD);
 
-    Vector3f camPos = ray.o;
-
-    Vector3f Radiance = computeRadiance(scene, ray, camPos, idx, state);
+    Vector3f Radiance = computeRadiance(scene, ray, camera, idx, state);
 
     //Radiance *= Vector3f(2.0f) / ((Radiance / 2.0f) + 1);
 
@@ -338,7 +335,7 @@ cudaError_t trace(Vector3f** dev_out, const Camera& camera, uint width, uint hei
     Basis basis = { cx, cy, cz };
 
     // Launch a kernel on the GPU with one thread for each element.
-    traceKernel << <gridSize, blockSize >> >(*dev_out, width, height, camera.position, basis, scene, d_state);
+    traceKernel << <gridSize, blockSize >> >(*dev_out, width, height, camera, basis, scene, d_state);
 
     //accumKernel << <gridSize, blockSize >> >(*dev_out, 512, 512, dev_out, 1);
 
