@@ -27,7 +27,7 @@ int main()
     loadScene(scene, std::string("res/cornell_box.obj"));
 
     renderer.init(scene);
-    renderer.resize(width, height);
+    renderer.resize(Size(width, height));
 
 	clock_t begin = clock();
 	int frames = 0;

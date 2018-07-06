@@ -48,7 +48,7 @@ void CudaRenderer::update()
     uint numPixels = windowSize.width * windowSize.height;
 
     // Add vectors in parallel.
-    trace(&dev_out, camera, windowSize.width, windowSize.height, gpu_scene, d_state);
+    trace(&dev_out, camera, windowSize, gpu_scene, d_state);
     cudaCheckError();
 
     iterations++;

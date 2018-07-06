@@ -20,15 +20,6 @@
 #define NUM_THREADS 64
 #define ABSORPTION 0.25
 
-//Macro for checking cuda errors following a cuda launch or api call
-#define cudaCheckError() {\
-    cudaError_t e = cudaGetLastError();\
-    if (e != cudaSuccess) {\
-        printf("Cuda failure %s:%d: '%s'\n", __FILE__, __LINE__, cudaGetErrorString(e));\
-        exit(0);\
-    }\
-}
-
 __device__ HitInfo trace(const GPU_Scene& scene, Ray ray);
 __device__ Vector3f computeRadiance(const GPU_Scene& scene, Ray r, const Camera& camera, const unsigned int idx, curandState *state);
 
@@ -305,11 +296,12 @@ Error:
     return cudaStatus;
 }
 
-cudaError_t trace(Vector3f** dev_out, const Camera& camera, uint width, uint height, const GPU_Scene &scene, curandState* d_state) {
-    cudaError_t cudaStatus;
+cudaError_t trace(Vector3f** dev_out, const Camera& camera, Size size, const GPU_Scene &scene, curandState* d_state) {
+    uint w = size.width;
+    uint h = size.height;
 
     unsigned int blockSize = NUM_THREADS;
-    unsigned int gridSize = (width * height) / NUM_THREADS + ((width * height) % NUM_THREADS == 0 ? 0 : 1);
+    unsigned int gridSize = (w * h) / NUM_THREADS + ((w * h) % NUM_THREADS == 0 ? 0 : 1);
 
     Vector3f cz = normalise(camera.direction);
     Vector3f cy(0, 1, 0);
@@ -318,19 +310,12 @@ cudaError_t trace(Vector3f** dev_out, const Camera& camera, uint width, uint hei
     Basis basis = { cx, cy, cz };
 
     // Launch a kernel on the GPU with one thread for each element.
-    traceKernel << <gridSize, blockSize >> >(*dev_out, width, height, camera, basis, scene, d_state);
+    traceKernel << <gridSize, blockSize >> >(*dev_out, w, h, camera, basis, scene, d_state);
 
     //accumKernel << <gridSize, blockSize >> >(*dev_out, 512, 512, dev_out, 1);
 
     // Check for any errors launching the kernel
-    cudaStatus = cudaGetLastError();
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "traceKernel launch failed: %s\n", cudaGetErrorString(cudaStatus));
-        goto Error;
-    }
-
-Error:
-    return cudaStatus;
+    cudaCheckError();
 }
 
 cudaError_t destroy(curandState** d_state) {

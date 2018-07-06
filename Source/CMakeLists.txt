@@ -9,6 +9,7 @@ set(BASE
     ${DIR}/Log.h
     ${DIR}/Maths.h
     ${DIR}/Mesh.h
+    ${DIR}/Size.h
     ${DIR}/ModelLoader.h
     ${DIR}/Ray.h
     ${DIR}/Window.cpp
