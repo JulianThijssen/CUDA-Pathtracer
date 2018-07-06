@@ -2,6 +2,9 @@ set(DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 set(BASE
     ${DIR}/Application.cpp
+    ${DIR}/Renderer.h
+    ${DIR}/CudaRenderer.h
+    ${DIR}/CudaRenderer.cpp
     ${DIR}/Log.cpp
     ${DIR}/Log.h
     ${DIR}/Maths.h
