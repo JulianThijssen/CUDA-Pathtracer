@@ -27,6 +27,14 @@ CUDA struct Basis {
     Vector3f x;
     Vector3f y;
     Vector3f z;
+
+    CUDA Vector3f operator*(const Vector3f& v) const {
+        float bx = x.x * v.x + y.x * v.y + z.x * v.z;
+        float by = x.y * v.x + y.y * v.y + z.y * v.z;
+        float bz = x.z * v.x + y.z * v.y + z.z * v.z;
+
+        return Vector3f(bx, by, bz);
+    }
 };
 
 __device__ Vector3f uniformHemisphereSample(unsigned int idx, curandState *state, Vector3f n) {
@@ -48,12 +56,9 @@ __device__ Vector3f cosineHemisphereSample(unsigned int idx, curandState *state,
     float cosTheta = sqrtf(1.0 - u1);
     float sinTheta = sqrtf(1.0 - cosTheta * cosTheta);
 
-    float x = cosf(phi) * sinTheta;
-    float y = sinf(phi) * sinTheta;
-    float z = cosTheta;
+    Vector3f v(cosf(phi) * sinTheta, sinf(phi) * sinTheta, cosTheta);
 
-    Vector3f h(n.x, n.y, n.z);
-    Vector3f t = h;
+    Vector3f t(n.x, n.y, n.z);
     if (fabsf(t.x) <= fabsf(t.y) && fabsf(t.x) <= fabsf(t.z))
         t.x = 1.0;
     else if (fabsf(t.y) <= fabsf(t.x) && fabsf(t.y) <= fabsf(t.z))
@@ -65,11 +70,10 @@ __device__ Vector3f cosineHemisphereSample(unsigned int idx, curandState *state,
     b.normalise();
     t = cross(b, n);
 
-    float nx = t.x * x + b.x * y + n.x * z;
-    float ny = t.y * x + b.y * y + n.y * z;
-    float nz = t.z * x + b.z * y + n.z * z;
+    Basis basis{ t, b, n };
+    Vector3f sample = basis * v;
 
-    return Vector3f(nx, ny, nz);
+    return sample;
 }
 
 __global__ void setup_kernel(curandState *state) {
