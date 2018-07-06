@@ -25,54 +25,45 @@ void CudaRenderer::init(const Scene& scene)
     cudaStatus = cudaSetDevice(0);
 }
 
-void CudaRenderer::resize(unsigned int width, unsigned int height)
+void CudaRenderer::resize(Size size)
 {
-    this->width = width;
-    this->height = height;
-    out = new Vector3f[width * height];
-    accumulation = new Vector3f[width * height];
-    final = new Vector3f[width * height];
+    windowSize = size;
+
+    unsigned int numPixels = windowSize.width * windowSize.height;
+    out = new Vector3f[numPixels];
+    accumulation = new Vector3f[numPixels];
+    final = new Vector3f[numPixels];
     dev_out = 0;
 
     // Make output
-    cudaError_t cudaStatus;
-    cudaStatus = cudaMalloc((void**)&dev_out, width * height * sizeof(Vector3f));
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "dev_out cudaMalloc failed!");
-        exit(1);
-    }
+    cudaMalloc((void**)&dev_out, numPixels * sizeof(Vector3f));
+    cudaCheckError();
 
     // Init the kernel
-    kernelInit(width, height, &d_state);
+    kernelInit(windowSize, &d_state);
 }
 
 void CudaRenderer::update()
 {
-    cudaError_t cudaStatus;
+    uint numPixels = windowSize.width * windowSize.height;
 
     // Add vectors in parallel.
-    cudaStatus = trace(&dev_out, camera, width, height, gpu_scene, d_state);
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "trace failed!");
-        exit(1);
-    }
+    trace(&dev_out, camera, windowSize.width, windowSize.height, gpu_scene, d_state);
+    cudaCheckError();
 
     iterations++;
 
     // Copy output vector from GPU buffer to host memory.
-    cudaStatus = cudaMemcpy(out, dev_out, width * height * sizeof(Vector3f), cudaMemcpyDeviceToHost);
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "dev_out -> out cudaMemcpy failed!");
-        exit(1);
-    }
+    cudaMemcpy(out, dev_out, numPixels * sizeof(Vector3f), cudaMemcpyDeviceToHost);
+    cudaCheckError();
 
     // Add the output to the accumulation buffer
-    for (unsigned int i = 0; i < width * height; i++) {
+    for (unsigned int i = 0; i < numPixels; i++) {
         accumulation[i] += out[i];
     }
 
     // Divide the accumulated buffer by the iterations
-    for (unsigned int i = 0; i < width * height; i++) {
+    for (unsigned int i = 0; i < numPixels; i++) {
         final[i] = accumulation[i] / iterations;
     }
 

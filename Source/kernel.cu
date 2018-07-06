@@ -283,8 +283,9 @@ bool uploadMesh(Scene &scene, GPU_Scene& gpu_scene)
     return true;
 }
 
-cudaError_t init(uint w, uint h, curandState** d_state) {
-    cudaError_t cudaStatus;
+void kernelInit(Size size, curandState** d_state) {
+    uint w = size.width;
+    uint h = size.height;
 
     unsigned int blockSize = NUM_THREADS;
     unsigned int gridSize = (w * h) / NUM_THREADS + ((w * h) % NUM_THREADS == 0 ? 0 : 1);

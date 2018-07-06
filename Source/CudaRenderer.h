@@ -6,12 +6,12 @@
 
 #include "kernel.cuh"
 
-class CudaRenderer : private Renderer
+class CudaRenderer : protected Renderer
 {
 public:
     CudaRenderer();
     virtual void init(const Scene& scene) override;
-    virtual void resize(unsigned int width, unsigned int height) override;
+    virtual void resize(Size size) override;
     virtual void update() override;
     virtual void destroy() override;
 
@@ -29,6 +29,5 @@ private:
 
     curandState *d_state;
 
-    unsigned int width, height;
     int iterations = 0;
 };
